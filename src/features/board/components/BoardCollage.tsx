@@ -41,8 +41,6 @@ export function BoardCollage({
       className={`board-collage ${interactive ? 'board-collage--interactive' : 'board-collage--thumbnail'} ${className}`}
       aria-label={`${contents.length}개의 콘텐츠로 구성된 보드`}
     >
-      <span className="board-collage__tape board-collage__tape--one" />
-      <span className="board-collage__tape board-collage__tape--two" />
       {contents.slice(0, slots.length).map((content, index) => {
         const slot = slots[index]
         const style = {
@@ -58,7 +56,6 @@ export function BoardCollage({
             className="collage-item"
             key={`${content.id}-${index}`}
             style={style}
-            tabIndex={interactive ? 0 : undefined}
           >
             <ContentArtwork content={content} />
             {interactive && (

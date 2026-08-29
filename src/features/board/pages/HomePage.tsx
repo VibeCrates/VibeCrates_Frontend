@@ -44,29 +44,24 @@ export function HomePage() {
   }
 
   async function handleLogout() {
-    await logout()
-    navigate('/login', { replace: true })
+    // logout API가 실패해도 로컬 토큰은 이미 비워지므로 로그인 화면으로 반드시 이동시킨다.
+    try {
+      await logout()
+    } finally {
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
     <main className="home-page">
       <header className="home-nav">
-        <Brand compact />
-        <div className="home-nav__right">
-          <span className="edition-label">YOUR CULTURE, CURATED</span>
-          <button className="text-button" type="button" onClick={() => void handleLogout()}>
-            로그아웃
-          </button>
-        </div>
+        <button className="text-button" type="button" onClick={() => void handleLogout()}>
+          로그아웃
+        </button>
       </header>
 
-      <section className="home-hero" aria-labelledby="home-title">
-        <span className="hero-kicker">A personal archive of what moves you</span>
-        <h1 id="home-title">
-          Find the feeling.
-          <em>Keep the pieces.</em>
-        </h1>
-        <p>영화와 음악, 책을 하나의 감각으로 엮어 나만의 컬렉션을 만나보세요.</p>
+      <section className="home-hero">
+        <h1>Crates</h1>
         <SearchBar isPending={search.isPending} onSearch={handleSearch} />
         <div className="search-feedback" aria-live="polite">
           {searchNotice}
@@ -74,63 +69,43 @@ export function HomePage() {
       </section>
 
       <div className="home-content">
-        <section className="board-section board-section--featured">
-          <SectionHeading
-            eyebrow="01 / For your mood"
-            title="오늘의 추천"
-            aside={<span>취향 벡터를 바탕으로 고른 12개의 조각</span>}
-          />
+        <section className="board-section">
+          <SectionHeading title="오늘의 추천 보드" />
           {recommended.isPending ? (
-            <div className="featured-board skeleton skeleton--featured" />
+            <div className="skeleton skeleton--featured" />
           ) : recommended.isError ? (
-            <div className="section-state section-state--error">
+            <div className="section-state">
               <span>추천 보드를 불러오지 못했어요.</span>
               <button type="button" onClick={() => void recommended.refetch()}>다시 불러오기</button>
             </div>
           ) : (
-            <article className="featured-board">
-              <div className="featured-board__note" aria-hidden="true">
-                <span>CURATED</span>
-                <strong>just for you</strong>
-                <small>{new Date().toLocaleDateString('ko-KR')}</small>
-              </div>
+            <div className="featured-board">
               <BoardCollage contents={recommended.data ?? []} interactive />
-            </article>
+            </div>
           )}
         </section>
 
         <section className="board-section">
-          <SectionHeading
-            eyebrow="02 / Your archive"
-            title="내 보드"
-            aside={<span>좋아하는 것들이 머무는 개인 서랍</span>}
-          />
+          <SectionHeading title="내 보드" />
           <div className="empty-crate">
-            <div className="empty-crate__number">00</div>
-            <div>
-              <h3>첫 번째 보드를 기다리고 있어요.</h3>
-              <p>보드 생성 API가 연결되면 검색으로 만든 컬렉션이 이곳에 쌓입니다.</p>
-            </div>
+            <h3>첫 번째 보드를 기다리고 있어요.</h3>
+            <p>보드 생성 API가 연결되면 검색으로 만든 컬렉션이 이곳에 쌓입니다.</p>
           </div>
         </section>
 
         <section className="board-section">
-          <SectionHeading
-            eyebrow="03 / Community picks"
-            title="지금 사랑받는 보드"
-            aside={<span>다른 수집가들이 자주 꺼내 보는 조합</span>}
-          />
+          <SectionHeading title="인기 보드" />
           {popular.isPending ? (
             <LoadingTiles />
           ) : popular.isError ? (
-            <div className="section-state section-state--error">
+            <div className="section-state">
               <span>인기 보드를 불러오지 못했어요.</span>
               <button type="button" onClick={() => void popular.refetch()}>다시 불러오기</button>
             </div>
           ) : popular.data?.length ? (
             <div className="board-grid">
-              {popular.data.map((board, index) => (
-                <BoardTile board={board} index={index} key={board.boardId} />
+              {popular.data.map((board) => (
+                <BoardTile board={board} key={board.boardId} />
               ))}
             </div>
           ) : (
@@ -142,7 +117,6 @@ export function HomePage() {
       <footer className="site-footer">
         <Brand compact />
         <span>Films · Sounds · Stories</span>
-        <span>© {new Date().getFullYear()} VibeCrates</span>
       </footer>
     </main>
   )

@@ -38,7 +38,7 @@ export function BoardPage() {
 
     try {
       const canvas = await html2canvas(captureAreaRef.current, {
-        backgroundColor: '#f3efe6',
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
       })
@@ -114,9 +114,6 @@ export function BoardPage() {
           </div>
           <div className="board-stage__canvas">
             <BoardCollage contents={board.data.contents} interactive />
-          </div>
-          <div className="board-stage__stamp" aria-hidden="true">
-            VIBE<br />CRATES
           </div>
         </div>
       ) : null}

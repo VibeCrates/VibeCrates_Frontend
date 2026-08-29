@@ -28,7 +28,6 @@ export function SearchBar({
       onSubmit={handleSubmit}
       role="search"
     >
-      <span className="search-bar__spark" aria-hidden="true">✦</span>
       <label className="sr-only" htmlFor={compact ? 'board-search' : 'home-search'}>
         컬렉션 검색어
       </label>
@@ -40,9 +39,8 @@ export function SearchBar({
         placeholder="create your own collection via searching"
         autoComplete="off"
       />
-      <button type="submit" disabled={!keyword.trim() || isPending}>
-        <span>{isPending ? '찾는 중' : 'Create'}</span>
-        <span aria-hidden="true">↗</span>
+      <button type="submit" disabled={!keyword.trim() || isPending} aria-label="검색">
+        {isPending ? '…' : '→'}
       </button>
     </form>
   )

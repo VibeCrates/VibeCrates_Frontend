@@ -10,18 +10,21 @@ export interface LoginRequest {
   pwd: string
 }
 
+/** 백엔드가 LocalDate로 받는 필드. 연도만 보내면 파싱에 실패하므로 YYYY-MM-DD 형식이어야 한다. */
+export type IsoDate = string
+
 export interface SignupRequest extends LoginRequest {
   email: string
   nickname: string
   gender: Gender
-  birthYear: string
+  birthYear: IsoDate
 }
 
 export interface ProfileRequest {
   email: string
   nickname: string
   gender: Gender
-  birthYear: string
+  birthYear: IsoDate
 }
 
 async function receiveAccessToken(
@@ -68,6 +71,8 @@ export async function logout(): Promise<void> {
 }
 
 export function getOAuthAuthorizationUrl(provider: OAuthProvider): string {
-  const authOrigin = import.meta.env.VITE_AUTH_ORIGIN.replace(/\/$/, '')
+  // .env가 빠진 빌드에서도 로그인 화면이 죽지 않도록 방어한다.
+  // 빈 값이면 동일 오리진으로 요청되므로 운영 구성과 동일하게 동작한다.
+  const authOrigin = (import.meta.env.VITE_AUTH_ORIGIN ?? '').replace(/\/$/, '')
   return `${authOrigin}/oauth2/authorization/${provider}`
 }
