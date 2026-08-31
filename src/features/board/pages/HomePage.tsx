@@ -7,9 +7,11 @@ import { logout } from '../../auth/api/authApi'
 import { useAccessToken } from '../../auth/model/useAccessToken'
 import { useSearchVector } from '../../search/model/useSearchVector'
 import { BoardCollage } from '../components/BoardCollage'
+import { BoardExpandModal } from '../components/BoardExpandModal'
 import { BoardTile } from '../components/BoardTile'
 import { usePopularBoards, useRecommendedContents } from '../model/boardQueries'
 import { useDragScroll } from '../model/useDragScroll'
+import type { BoardWithContents } from '../../../shared/types/board'
 
 function LoadingTiles({ count = 4 }: { count?: number }) {
   return (
@@ -33,6 +35,9 @@ export function HomePage() {
   const search = useSearchVector()
   const { ref: popularScrollRef, dragHandlers: popularDragHandlers } =
     useDragScroll<HTMLDivElement>()
+  // 확대에 필요한 데이터(제목·좋아요·콘텐츠)가 이미 목록 응답에 들어 있어
+  // 보드 객체를 그대로 들고 있으면 추가 조회 없이 모달을 띄울 수 있다.
+  const [expandedBoard, setExpandedBoard] = useState<BoardWithContents | null>(null)
 
   function handleSearch(keyword: string) {
     setSearchNotice(null)
@@ -108,7 +113,7 @@ export function HomePage() {
           ) : popular.data?.length ? (
             <div className="board-grid" ref={popularScrollRef} {...popularDragHandlers}>
               {popular.data.map((board) => (
-                <BoardTile board={board} key={board.boardId} />
+                <BoardTile board={board} key={board.boardId} onOpen={setExpandedBoard} />
               ))}
             </div>
           ) : (
@@ -116,6 +121,10 @@ export function HomePage() {
           )}
         </section>
       </div>
+
+      {expandedBoard ? (
+        <BoardExpandModal board={expandedBoard} onClose={() => setExpandedBoard(null)} />
+      ) : null}
 
       <footer className="site-footer">
         <Brand compact />

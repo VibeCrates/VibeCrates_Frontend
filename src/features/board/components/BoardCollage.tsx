@@ -21,6 +21,8 @@ interface BoardCollageProps {
   contents: ContentSummary[]
   interactive?: boolean
   className?: string
+  /** 넘기면 포스터가 버튼이 되어 콘텐츠 상세를 열 수 있다. */
+  onContentSelect?: (content: ContentSummary) => void
 }
 
 function getDomainLabel(contentType: string) {
@@ -35,6 +37,7 @@ export function BoardCollage({
   contents,
   interactive = true,
   className = '',
+  onContentSelect,
 }: BoardCollageProps) {
   return (
     <div
@@ -57,7 +60,19 @@ export function BoardCollage({
             key={`${content.id}-${index}`}
             style={style}
           >
-            <ContentArtwork content={content} />
+            {/* figcaption은 figure의 직계 자식이어야 하므로 포스터만 버튼으로 감싼다. */}
+            {onContentSelect ? (
+              <button
+                className="collage-item__button"
+                type="button"
+                onClick={() => onContentSelect(content)}
+                aria-label={`${content.title || '제목 미상'} 상세 보기`}
+              >
+                <ContentArtwork content={content} />
+              </button>
+            ) : (
+              <ContentArtwork content={content} />
+            )}
             {interactive && (
               <figcaption className="collage-item__details">
                 <span className={`domain-pill domain-pill--${content.contentType.toLowerCase()}`}>
