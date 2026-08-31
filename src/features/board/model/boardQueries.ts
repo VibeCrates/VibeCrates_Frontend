@@ -1,9 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import {
-  getBoard,
-  getLikedBoards,
-  getRecommendedContents,
-} from '../api/boardApi'
+import { getLikedBoards, getRecommendedContents } from '../api/boardApi'
 
 const RECOMMENDED_CONTENT_COUNT = 12
 const POPULAR_BOARD_COUNT = 8
@@ -24,10 +20,3 @@ export function usePopularBoards(enabled: boolean) {
   })
 }
 
-export function useBoard(boardId: number | null, enabled: boolean) {
-  return useQuery({
-    queryKey: ['boards', 'detail', boardId],
-    queryFn: () => getBoard(boardId as number),
-    enabled: enabled && boardId !== null,
-  })
-}

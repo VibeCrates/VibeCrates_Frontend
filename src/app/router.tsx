@@ -3,7 +3,6 @@ import { Navigate, Route, Routes } from 'react-router'
 import { AuthCallbackPage } from '../features/auth/pages/AuthCallbackPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { useAccessToken } from '../features/auth/model/useAccessToken'
-import { BoardPage } from '../features/board/pages/BoardPage'
 import { HomePage } from '../features/board/pages/HomePage'
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -15,7 +14,6 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
-      <Route path="/boards/:boardId" element={<RequireAuth><BoardPage /></RequireAuth>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
