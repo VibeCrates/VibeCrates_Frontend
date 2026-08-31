@@ -174,7 +174,30 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 /* 오늘의 추천: 백엔드가 보드가 아니라 콘텐츠 목록을 주므로 큰 캔버스 하나로 보여준다. */
 .featured-board { width: min(620px,100%); margin: 0 auto; }
 
-.board-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1.4rem; }
+/* 인기 보드: 한 화면에 4개만 두고 나머지는 좌우 스크롤로 넘긴다.
+   grid-auto-flow:column이라 한 줄로만 배치되고, grid-auto-columns의 100%는
+   스크롤 컨테이너의 "보이는" 너비 기준이므로 gap 3칸을 뺀 1/4이 정확히 4개 노출이 된다. */
+.board-grid {
+  --board-gap: 1.4rem;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 3 * var(--board-gap)) / 4);
+  gap: var(--board-gap);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding-bottom: .75rem; /* 스크롤바가 타일 제목을 가리지 않도록 */
+  scrollbar-width: thin;
+  scrollbar-color: #d5d5d5 transparent;
+}
+.board-grid > * { scroll-snap-align: start; }
+.board-grid::-webkit-scrollbar { height: 6px; }
+.board-grid::-webkit-scrollbar-track { background: transparent; }
+.board-grid::-webkit-scrollbar-thumb { border-radius: 3px; background: #d5d5d5; }
+.board-grid:hover::-webkit-scrollbar-thumb { background: #bdbdbd; }
+/* 마우스로 잡아끌기: 드래그 중에는 스냅을 꺼야 손을 따라오는 느낌이 끊기지 않는다. */
+.board-grid { cursor: grab; }
+.board-grid.is-dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
 .board-tile { display: block; min-width: 0; color: inherit; text-decoration: none; }
 .board-tile__canvas { position: relative; aspect-ratio: 1; background: var(--surface); box-shadow: 0 6px 14px rgba(0,0,0,.18); transition: transform .15s ease, box-shadow .15s ease; }
 .board-tile .board-collage { position: absolute; inset: 2%; width: 96%; }
@@ -268,12 +291,13 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 /* ---------- 반응형 ---------- */
 
 @media (max-width: 820px) {
-  .board-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  /* 좁은 화면에서는 2개만 노출하고 나머지는 동일하게 좌우 스크롤 */
+  .board-grid { grid-auto-columns: calc((100% - var(--board-gap)) / 2); }
   .board-nav__actions .outline-button { display: none; }
 }
 
 @media (max-width: 560px) {
-  .board-grid { gap: 1.1rem; }
+  .board-grid { --board-gap: 1.1rem; }
   .board-nav { grid-template-columns: auto 1fr; row-gap: .6rem; }
   .board-nav .search-bar { grid-row: 2; grid-column: 1 / -1; max-width: none; }
   .board-nav__actions { grid-column: 2; grid-row: 1; }

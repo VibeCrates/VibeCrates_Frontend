@@ -9,6 +9,7 @@ import { useSearchVector } from '../../search/model/useSearchVector'
 import { BoardCollage } from '../components/BoardCollage'
 import { BoardTile } from '../components/BoardTile'
 import { usePopularBoards, useRecommendedContents } from '../model/boardQueries'
+import { useDragScroll } from '../model/useDragScroll'
 
 function LoadingTiles({ count = 4 }: { count?: number }) {
   return (
@@ -30,6 +31,8 @@ export function HomePage() {
   const recommended = useRecommendedContents(Boolean(accessToken))
   const popular = usePopularBoards(Boolean(accessToken))
   const search = useSearchVector()
+  const { ref: popularScrollRef, dragHandlers: popularDragHandlers } =
+    useDragScroll<HTMLDivElement>()
 
   function handleSearch(keyword: string) {
     setSearchNotice(null)
@@ -103,7 +106,7 @@ export function HomePage() {
               <button type="button" onClick={() => void popular.refetch()}>다시 불러오기</button>
             </div>
           ) : popular.data?.length ? (
-            <div className="board-grid">
+            <div className="board-grid" ref={popularScrollRef} {...popularDragHandlers}>
               {popular.data.map((board) => (
                 <BoardTile board={board} key={board.boardId} />
               ))}
