@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BoardWithContents } from '../../../shared/types/board'
 import type { ContentSummary } from '../../../shared/types/content'
 import { BoardCollage } from './BoardCollage'
+import { BoardLikeButton } from './BoardLikeButton'
 import { ContentDetailPanel } from './ContentDetailPanel'
 
 interface BoardExpandModalProps {
@@ -87,6 +88,13 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
       <div className="board-modal__panel">
         {/* 버튼과 상세 패널은 캡처 영역 밖에 둔다. PNG에는 제목과 콜라주만 담긴다. */}
         <div className="board-modal__actions">
+          <BoardLikeButton
+            boardId={board.boardId}
+            title={board.title || '제목 없는 보드'}
+            contents={board.contents}
+            initialLiked={board.liked}
+            initialLikeCount={board.likeCount}
+          />
           <button
             className="outline-button"
             type="button"

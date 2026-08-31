@@ -2,7 +2,28 @@ import type { CSSProperties } from 'react'
 import type { ContentSummary } from '../../../shared/types/content'
 import { ContentArtwork } from './ContentArtwork'
 
-const slots = [
+/**
+ * 보드 1개는 콘텐츠 8건 고정이라 12칸 배치를 쓰면 뒤쪽 4칸이 늘 비어서
+ * 우하단이 휑하게 보인다. 8건 전용으로 2행 x 4열을 잡고 폭을 키워 캔버스를 채운다.
+ *
+ * 치수 근거: .board-collage는 aspect-ratio 20/21, .artwork는 3/4라서
+ * 슬롯 높이(%) = 폭(%) x (4/3) / 1.05 = 폭 x 약 1.27.
+ * 폭 34%면 높이 43%라 2행이 딱 들어간다. 3행을 유지했다면 폭을 21% 이상 못 키운다.
+ * 가로로는 4장 x 34% = 136%가 되어 자연스럽게 겹치면서 콜라주 느낌이 유지된다.
+ */
+const SLOTS_8 = [
+  { left: 0, top: 5, width: 34, rotate: -5, zIndex: 1 },
+  { left: 22, top: 1, width: 35, rotate: 4, zIndex: 3 },
+  { left: 44, top: 4, width: 34, rotate: -2, zIndex: 2 },
+  { left: 66, top: 7, width: 33, rotate: 6, zIndex: 1 },
+  { left: 1, top: 52, width: 34, rotate: 5, zIndex: 2 },
+  { left: 23, top: 49, width: 35, rotate: -4, zIndex: 4 },
+  { left: 45, top: 53, width: 34, rotate: 3, zIndex: 3 },
+  { left: 66, top: 50, width: 33, rotate: -6, zIndex: 2 },
+]
+
+/** '오늘의 추천 보드'는 콘텐츠를 12건까지 받으므로 기존 3행 배치를 그대로 쓴다. */
+const SLOTS_12 = [
   { left: 3, top: 7, width: 20, rotate: -7, zIndex: 1 },
   { left: 16, top: 3, width: 20, rotate: 5, zIndex: 2 },
   { left: 37, top: 6, width: 29, rotate: -1, zIndex: 3 },
@@ -39,6 +60,9 @@ export function BoardCollage({
   className = '',
   onContentSelect,
 }: BoardCollageProps) {
+  // 8건 이하면 캔버스를 꽉 채우는 2행 배치, 그 이상이면 3행 배치를 쓴다.
+  const slots = contents.length <= SLOTS_8.length ? SLOTS_8 : SLOTS_12
+
   return (
     <div
       className={`board-collage ${interactive ? 'board-collage--interactive' : 'board-collage--thumbnail'} ${className}`}

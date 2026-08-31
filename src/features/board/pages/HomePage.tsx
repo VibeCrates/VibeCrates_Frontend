@@ -8,6 +8,7 @@ import { useAccessToken } from '../../auth/model/useAccessToken'
 import { useSearchVector } from '../../search/model/useSearchVector'
 import { BoardCollage } from '../components/BoardCollage'
 import { BoardExpandModal } from '../components/BoardExpandModal'
+import { BoardLikeButton } from '../components/BoardLikeButton'
 import { BoardTile } from '../components/BoardTile'
 import { usePopularBoards, useRecommendedContents } from '../model/boardQueries'
 import { useDragScroll } from '../model/useDragScroll'
@@ -35,9 +36,12 @@ export function HomePage() {
   const search = useSearchVector()
   const { ref: popularScrollRef, dragHandlers: popularDragHandlers } =
     useDragScroll<HTMLDivElement>()
-  // 확대에 필요한 데이터(제목·좋아요·콘텐츠)가 이미 목록 응답에 들어 있어
+  // 확대에 필요한 데이터(제목·좋아요·콘텐츠 8건)가 이미 목록 응답에 들어 있어
   // 보드 객체를 그대로 들고 있으면 추가 조회 없이 모달을 띄울 수 있다.
   const [expandedBoard, setExpandedBoard] = useState<BoardWithContents | null>(null)
+  // 추천 보드는 DB에 없다가 좋아요를 누른 순간 저장된다. 그때 받은 id를 기억해야
+  // 다시 눌렀을 때 같은 보드가 또 저장되지 않는다.
+  const [recommendedBoardId, setRecommendedBoardId] = useState<number | null>(null)
 
   function handleSearch(keyword: string) {
     setSearchNotice(null)
@@ -89,6 +93,16 @@ export function HomePage() {
           ) : (
             <div className="featured-board">
               <BoardCollage contents={recommended.data ?? []} interactive />
+              {recommended.data?.length ? (
+                <div className="featured-board__actions">
+                  <BoardLikeButton
+                    boardId={recommendedBoardId}
+                    title="오늘의 추천 보드"
+                    contents={recommended.data}
+                    onSaved={setRecommendedBoardId}
+                  />
+                </div>
+              ) : null}
             </div>
           )}
         </section>
