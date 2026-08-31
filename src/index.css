@@ -335,3 +335,9 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .board-modal__title p { margin: 0 0 1rem; color: var(--ink-soft); font-family: var(--font-label); font-size: .78rem; }
 .board-modal__notice { min-height: 1.2rem; color: var(--ink-soft); font-family: var(--font-label); font-size: .78rem; text-align: center; }
 
+/* 좋아요 버튼: 눌린 상태를 색으로만 구분하지 않도록 하트 모양(♡/♥)도 함께 바뀐다. */
+.like-button { display: inline-flex; align-items: center; gap: .4rem; padding: .45em .9em; border: 2px solid var(--ink); background: #fff; color: var(--ink); font-family: var(--font-label); font-weight: 700; font-size: .82rem; cursor: pointer; }
+.like-button:not(:disabled):hover { background: var(--ink); color: #fff; }
+.like-button--on { border-color: #d4344a; color: #d4344a; }
+.like-button--on:not(:disabled):hover { background: #d4344a; color: #fff; }
+.featured-board__actions { display: flex; justify-content: center; margin-top: 1rem; }
