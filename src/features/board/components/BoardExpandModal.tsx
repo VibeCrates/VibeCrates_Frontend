@@ -1,14 +1,27 @@
 import html2canvas from 'html2canvas'
 import { useEffect, useRef, useState } from 'react'
+import type { BoardLikeResult } from '../api/boardApi'
 import type { BoardWithContents } from '../../../shared/types/board'
-import type { ContentSummary } from '../../../shared/types/content'
+import { useBoardEditor } from '../model/useBoardEditor'
 import { BoardCollage } from './BoardCollage'
 import { BoardLikeButton } from './BoardLikeButton'
+import { BoardTitleEditor } from './BoardTitleEditor'
 import { ContentDetailPanel } from './ContentDetailPanel'
+import { ContentSearchPanel } from './ContentSearchPanel'
 
 interface BoardExpandModalProps {
   board: BoardWithContents
   onClose: () => void
+  /**
+   * 좋아요/취소 결과. 아직 저장 전인 보드(추천 보드)는 여기서 boardId가 처음 생기므로,
+   * 부모가 목록 캐시를 맞춰줘야 모달을 닫은 뒤에도 상태가 유지된다.
+   */
+  onLikeResult?: (result: BoardLikeResult) => void
+  /**
+   * 제목/콘텐츠를 저장한 결과. 내 보드가 아니거나 아직 저장 전이면 서버가 새 보드를 만들기 때문에
+   * <b>boardId가 바뀌어 돌아올 수 있다</b>. 부모가 이 값으로 화면과 캐시를 맞춰야 한다.
+   */
+  onBoardUpdated?: (board: BoardWithContents) => void
 }
 
 /**
@@ -17,18 +30,23 @@ interface BoardExpandModalProps {
  * 보드 데이터는 /api/boards/liked 응답에 제목·좋아요·콘텐츠 8건이 모두 들어 있어
  * 확대할 때 서버를 다시 부르지 않는다. 콘텐츠를 클릭할 때만 상세를 조회한다.
  */
-export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
-  const [selected, setSelected] = useState<ContentSummary | null>(null)
+export function BoardExpandModal({
+  board,
+  onClose,
+  onLikeResult,
+  onBoardUpdated,
+}: BoardExpandModalProps) {
   const [isCapturing, setIsCapturing] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [captureNotice, setCaptureNotice] = useState<string | null>(null)
   const captureAreaRef = useRef<HTMLDivElement>(null)
+  const editor = useBoardEditor(board, onBoardUpdated)
 
   async function handleCapture() {
     if (!captureAreaRef.current) {
       return
     }
     setIsCapturing(true)
-    setNotice(null)
+    setCaptureNotice(null)
 
     try {
       const canvas = await html2canvas(captureAreaRef.current, {
@@ -40,9 +58,9 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
       link.download = `${board.title || 'crates-board'}.png`
       link.href = canvas.toDataURL('image/png')
       link.click()
-      setNotice('보드를 PNG로 저장했습니다.')
+      setCaptureNotice('보드를 PNG로 저장했습니다.')
     } catch {
-      setNotice('이미지 캡처에 실패했습니다. 이미지 서버의 CORS 설정을 확인해주세요.')
+      setCaptureNotice('이미지 캡처에 실패했습니다. 이미지 서버의 CORS 설정을 확인해주세요.')
     } finally {
       setIsCapturing(false)
     }
@@ -53,9 +71,13 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
       if (event.key !== 'Escape') {
         return
       }
-      // 상세가 열려 있으면 상세만 닫고 보드는 유지한다.
-      if (selected) {
-        setSelected(null)
+      // 편집 중이면 그것만 닫고 보드는 유지한다.
+      if (editor.editingSlot !== null) {
+        editor.cancelSlotEdit()
+      } else if (editor.isRenaming) {
+        editor.cancelRename()
+      } else if (editor.selected) {
+        editor.setSelected(null)
       } else {
         onClose()
       }
@@ -63,7 +85,7 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose, selected])
+  }, [editor, onClose])
 
   // 뒤쪽 홈 화면이 같이 스크롤되지 않도록 막는다. 모달이 열려 있는 동안 한 번만 적용하면 되므로
   // Escape 처리와 분리해서 selected가 바뀔 때마다 body 스타일을 건드리지 않게 한다.
@@ -94,6 +116,7 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
             contents={board.contents}
             initialLiked={board.liked}
             initialLikeCount={board.likeCount}
+            onLikeResult={onLikeResult}
           />
           <button
             className="outline-button"
@@ -112,31 +135,61 @@ export function BoardExpandModal({ board, onClose }: BoardExpandModalProps) {
           <div className="board-modal__capture">
             <div className="board-modal__title">
               <span className="board-modal__no">
-                CRATE NO. {String(board.boardId).padStart(3, '0')}
+                {board.boardId === null
+                  ? 'NEW CRATE'
+                  : `CRATE NO. ${String(board.boardId).padStart(3, '0')}`}
               </span>
-              <h2>{board.title || '제목 없는 보드'}</h2>
+              <BoardTitleEditor
+                isEditing={editor.isRenaming}
+                isSaving={editor.isSaving}
+                onCancel={editor.cancelRename}
+                onStart={editor.startRename}
+                onSubmit={editor.rename}
+                title={board.title ?? ''}
+              />
               <p>
                 {board.contents.length} pieces · 좋아요 {board.likeCount.toLocaleString()}
               </p>
             </div>
             {/* 캡처 대상은 콜라주뿐이다. 제목/pieces/좋아요 수는 화면에만 보이고 PNG에는 담기지 않는다. */}
             <div className="board-modal__canvas" ref={captureAreaRef}>
-              <BoardCollage contents={board.contents} interactive onContentSelect={setSelected} />
+              <BoardCollage
+                contents={board.contents}
+                interactive
+                onContentSelect={editor.setSelected}
+                // 어떤 콘텐츠인지는 슬롯 번호로 다시 찾으므로 위치만 쓴다.
+                onContentEdit={(_content, slotIndex) => editor.startSlotEdit(slotIndex)}
+              />
             </div>
           </div>
 
-          {selected ? (
+          {editor.editingSlot !== null && board.contents[editor.editingSlot] ? (
+            <ContentSearchPanel
+              boardContentIds={board.contents.map((content) => content.id)}
+              current={board.contents[editor.editingSlot]}
+              isSaving={editor.isSaving}
+              key={editor.editingSlot}
+              onClose={editor.cancelSlotEdit}
+              onSelect={editor.replaceSlot}
+            />
+          ) : editor.selected ? (
             <ContentDetailPanel
-              content={selected}
-              key={selected.id}
-              onClose={() => setSelected(null)}
+              content={editor.selected}
+              key={editor.selected.id}
+              onClose={() => editor.setSelected(null)}
             />
           ) : (
-            <p className="board-modal__hint">포스터를 클릭하면 상세 정보를 볼 수 있어요.</p>
+            <p className="board-modal__hint">
+              포스터를 클릭하면 상세 정보를 볼 수 있어요.
+              포스터에 마우스를 올리면 수정 버튼이 나타납니다.
+              {board.boardId === null ? ' 수정하면 내 보드로 저장됩니다.' : ''}
+            </p>
           )}
         </div>
 
-        <div className="board-modal__notice" aria-live="polite">{notice}</div>
+        <div className="board-modal__notice" aria-live="polite">
+          {editor.notice ?? captureNotice}
+        </div>
       </div>
     </div>
   )
