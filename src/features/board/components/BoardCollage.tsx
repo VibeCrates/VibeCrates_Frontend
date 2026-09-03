@@ -44,6 +44,8 @@ interface BoardCollageProps {
   className?: string
   /** 넘기면 포스터가 버튼이 되어 콘텐츠 상세를 열 수 있다. */
   onContentSelect?: (content: ContentSummary) => void
+  /** 넘기면 포스터에 마우스를 올렸을 때 수정 버튼이 뜬다. slotIndex는 0부터 시작한다. */
+  onContentEdit?: (content: ContentSummary, slotIndex: number) => void
 }
 
 function getDomainLabel(contentType: string) {
@@ -59,6 +61,7 @@ export function BoardCollage({
   interactive = true,
   className = '',
   onContentSelect,
+  onContentEdit,
 }: BoardCollageProps) {
   // 8건 이하면 캔버스를 꽉 채우는 2행 배치, 그 이상이면 3행 배치를 쓴다.
   const slots = contents.length <= SLOTS_8.length ? SLOTS_8 : SLOTS_12
@@ -96,6 +99,17 @@ export function BoardCollage({
               </button>
             ) : (
               <ContentArtwork content={content} />
+            )}
+            {/* 포스터가 이미 버튼이라 그 안에 넣을 수 없다(버튼 중첩). figure의 형제로 둔다. */}
+            {onContentEdit && (
+              <button
+                className="collage-item__edit"
+                type="button"
+                onClick={() => onContentEdit(content, index)}
+                aria-label={`${content.title || '제목 미상'} 교체하기`}
+              >
+                수정
+              </button>
             )}
             {interactive && (
               <figcaption className="collage-item__details">

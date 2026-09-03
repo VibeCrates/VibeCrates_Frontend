@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useBoardLike } from '../model/boardQueries'
+import type { BoardLikeResult } from '../api/boardApi'
 import type { ContentSummary } from '../../../shared/types/content'
 
 interface BoardLikeButtonProps {
@@ -9,7 +10,11 @@ interface BoardLikeButtonProps {
   contents: ContentSummary[]
   initialLiked?: boolean
   initialLikeCount?: number
-  onSaved?: (boardId: number) => void
+  /**
+   * 좋아요/취소가 성공할 때마다 서버가 돌려준 최신 상태를 올려보낸다.
+   * 부모는 이걸로 새로 발급된 boardId를 기억하거나 캐시를 맞춘다.
+   */
+  onLikeResult?: (result: BoardLikeResult) => void
 }
 
 export function BoardLikeButton({
@@ -18,7 +23,7 @@ export function BoardLikeButton({
   contents,
   initialLiked = false,
   initialLikeCount = 0,
-  onSaved,
+  onLikeResult,
 }: BoardLikeButtonProps) {
   const [liked, setLiked] = useState(initialLiked)
   const [likeCount, setLikeCount] = useState(initialLikeCount)
@@ -37,9 +42,8 @@ export function BoardLikeButton({
           setLiked(result.liked)
           setLikeCount(result.likeCount)
           // 저장되며 새로 발급된 id를 올려보내야 다음 클릭이 같은 보드를 또 저장하지 않는다.
-          if (boardId === null) {
-            onSaved?.(result.boardId)
-          }
+          // 취소까지 포함해 매번 올려보내야 부모가 들고 있는 캐시도 최신 상태로 유지된다.
+          onLikeResult?.(result)
         },
       },
     )
