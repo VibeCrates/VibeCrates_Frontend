@@ -1,16 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Brand } from '../../../app/components/Brand'
+import { HeaderMenu } from '../../../app/components/HeaderMenu'
 import { SearchBar } from '../../../app/components/SearchBar'
 import { SectionHeading } from '../../../app/components/SectionHeading'
-import { logout } from '../../auth/api/authApi'
 import { useAccessToken } from '../../auth/model/useAccessToken'
 import { buildSearchPath } from '../../search/model/searchPath'
 import { BoardExpandModal } from '../components/BoardExpandModal'
 import { BoardTile } from '../components/BoardTile'
 import {
-  MY_BOARDS_KEY,
+  MY_BOARDS_PREFIX,
   POPULAR_BOARDS_KEY,
   RECOMMENDED_BOARDS_KEY,
   useMyBoards,
@@ -65,7 +65,7 @@ export function HomePage() {
     )
     // 좋아요는 곧 "내 크레이트에 담기"라 내 보드 목록의 구성 자체가 바뀐다.
     // 어느 자리에 끼는지는 좋아요 수 정렬에 달려 있어 직접 계산하지 않고 다시 받아온다.
-    void queryClient.invalidateQueries({ queryKey: MY_BOARDS_KEY })
+    void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
   }
 
   /**
@@ -83,7 +83,7 @@ export function HomePage() {
       cached?.map((board) => (board.boardId === updated.boardId ? updated : board)),
     )
     // 복제되면 내 보드가 하나 늘어난다. 새 보드가 목록의 어디에 들어갈지는 서버가 안다.
-    void queryClient.invalidateQueries({ queryKey: MY_BOARDS_KEY })
+    void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
   }
 
   // 검색 결과는 별도 페이지에서 그린다. 여기서는 이동만 시키고,
@@ -92,21 +92,10 @@ export function HomePage() {
     navigate(buildSearchPath(keyword))
   }
 
-  async function handleLogout() {
-    // logout API가 실패해도 로컬 토큰은 이미 비워지므로 로그인 화면으로 반드시 이동시킨다.
-    try {
-      await logout()
-    } finally {
-      navigate('/login', { replace: true })
-    }
-  }
-
   return (
     <main className="home-page">
       <header className="home-nav">
-        <button className="text-button" type="button" onClick={() => void handleLogout()}>
-          로그아웃
-        </button>
+        <HeaderMenu />
       </header>
 
       <section className="home-hero">
@@ -143,7 +132,15 @@ export function HomePage() {
         </section>
 
         <section className="board-section">
-          <SectionHeading title="내 보드" />
+          <SectionHeading
+            title="내 보드"
+            action={
+              // 홈은 첫 8개만 보여준다. 전부 보려면 보관함으로 간다.
+              <Link className="section-heading__action" to="/archive">
+                더 보기
+              </Link>
+            }
+          />
           {mine.isPending ? (
             <LoadingTiles />
           ) : mine.isError ? (

@@ -1,5 +1,6 @@
 import { Navigate, useNavigate, useSearchParams } from 'react-router'
 import { Brand } from '../../../app/components/Brand'
+import { HeaderMenu } from '../../../app/components/HeaderMenu'
 import { SearchBar } from '../../../app/components/SearchBar'
 import { useAccessToken } from '../../auth/model/useAccessToken'
 import { SearchBoardResult } from '../components/SearchBoardResult'
@@ -35,9 +36,12 @@ export function SearchResultPage() {
           key={keyword}
           onSearch={handleSearch}
         />
-        <button className="text-button" type="button" onClick={() => navigate('/')}>
-          홈으로
-        </button>
+        <div className="search-page__actions">
+          <button className="text-button" type="button" onClick={() => navigate('/')}>
+            홈으로
+          </button>
+          <HeaderMenu />
+        </div>
       </header>
 
       <div className="home-content">
