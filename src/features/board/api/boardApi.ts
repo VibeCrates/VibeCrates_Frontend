@@ -1,4 +1,5 @@
 import { apiRequest } from '../../../shared/api'
+import type { PageResponse } from '../../../shared/types/api'
 import type { BoardWithContents } from '../../../shared/types/board'
 
 /**
@@ -17,12 +18,40 @@ export function getLikedBoards(count: number): Promise<BoardWithContents[]> {
 }
 
 /**
- * 내 보드 — 내가 만든 보드와 내가 좋아요한 보드를 합쳐 좋아요 많은 순으로.
+ * 보관함 탭. 백엔드 MyBoardFilter와 같은 값이어야 한다.
  *
- * 이 서비스에서 좋아요는 사실상 "내 크레이트에 담기"라, 두 경로를 한 곳에서 보여준다.
+ * 세 값은 서로 배타적이지 않다. 좋아요한 보드를 고치면 복제본이 내 보드가 되고, 내가 만든
+ * 보드에 내가 좋아요를 누를 수도 있어서 LIKED와 CREATED에 동시에 속하는 보드가 정상적으로
+ * 존재한다. 각 목록은 "이 조건을 만족하는 보드 전부"라는 뜻이지 나눠 가진 몫이 아니다.
  */
-export function getMyBoards(count: number): Promise<BoardWithContents[]> {
-  return apiRequest(`/api/boards/mine?n=${encodeURIComponent(count)}`)
+export type MyBoardFilter = 'ALL' | 'LIKED' | 'CREATED'
+
+export interface MyBoardsQuery {
+  filter: MyBoardFilter
+  /** 0부터 시작한다. */
+  page: number
+  /** 서버 상한은 50이다. 그 이상은 400으로 거절된다. */
+  size: number
+}
+
+/**
+ * 내 보드 — 탭별로 한 페이지씩.
+ *
+ * 이 서비스에서 좋아요는 사실상 "내 크레이트에 담기"라, ALL은 내가 만든 보드와 좋아요한
+ * 보드를 합쳐서 준다. 홈의 "내 보드" 섹션이 보는 것이 곧 ALL의 첫 페이지다.
+ *
+ * 정렬은 좋아요 수가 아니라 "보관함에 담은 시각"의 최신순이다. like_count는 다른 사용자들의
+ * 좋아요로 계속 변해서, 그걸로 정렬하면 다음 페이지를 불러오는 사이에 순서가 뒤바뀌어
+ * 같은 보드가 두 번 오거나 누락된다.
+ */
+export function getMyBoards(query: MyBoardsQuery): Promise<PageResponse<BoardWithContents>> {
+  const params = new URLSearchParams({
+    filter: query.filter,
+    page: String(query.page),
+    size: String(query.size),
+  })
+
+  return apiRequest(`/api/boards/mine?${params.toString()}`)
 }
 
 export interface BoardLikeResult {
