@@ -5,20 +5,8 @@ import type { AccessTokenResponse } from '../../../shared/types/api'
 export type OAuthProvider = 'google' | 'kakao' | 'naver'
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER'
 
-export interface LoginRequest {
-  loginId: string
-  pwd: string
-}
-
 /** 백엔드가 LocalDate로 받는 필드. 연도만 보내면 파싱에 실패하므로 YYYY-MM-DD 형식이어야 한다. */
 export type IsoDate = string
-
-export interface SignupRequest extends LoginRequest {
-  email: string
-  nickname: string
-  gender: Gender
-  birthYear: IsoDate
-}
 
 export interface ProfileRequest {
   email: string
@@ -40,13 +28,8 @@ async function receiveAccessToken(
   return data
 }
 
-export function login(request: LoginRequest): Promise<AccessTokenResponse> {
-  return receiveAccessToken('/api/auth/login', request)
-}
-
-export function signup(request: SignupRequest): Promise<AccessTokenResponse> {
-  return receiveAccessToken('/api/auth/signup', request)
-}
+// 가입과 로그인은 OAuth로만 한다. 백엔드의 아이디·비밀번호 로그인(/api/auth/login)은
+// 부하테스트 계정 전용이라 화면에서 쓰지 않는다.
 
 export function exchangeOAuthToken(tempToken: string): Promise<AccessTokenResponse> {
   return receiveAccessToken('/api/auth/oauth-token', { tempToken })

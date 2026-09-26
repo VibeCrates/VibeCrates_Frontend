@@ -270,6 +270,32 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .login-panel small { display: block; margin-top: 1.6rem; color: var(--ink-faint); font-family: var(--font-label); font-size: .7rem; line-height: 1.6; }
 
 .status-page { display: grid; place-items: center; min-height: 100vh; padding: 2rem; color: var(--ink-soft); font-family: var(--font-label); font-size: .9rem; text-align: center; }
+
+/* ---------- 가입 직후 취향 콘텐츠 선택 ---------- */
+.onboarding-page { min-height: 100vh; padding: 1.25rem clamp(1rem,4vw,2.5rem) 3rem; }
+.onboarding-page__nav { display: flex; align-items: center; margin-bottom: clamp(1.5rem,5vw,3rem); }
+.onboarding { display: flex; flex-direction: column; gap: 1.2rem; width: min(640px,100%); margin: 0 auto; }
+.onboarding__intro { text-align: center; }
+.onboarding__intro .login-kicker { margin-bottom: .8rem; }
+.onboarding__intro h1 { margin: 0 0 .6rem; font-size: clamp(1.6rem,5vw,2.1rem); font-weight: 800; line-height: 1.25; letter-spacing: -.02em; }
+.onboarding__intro p { margin: 0; color: var(--ink-soft); font-family: var(--font-label); font-size: .86rem; line-height: 1.6; }
+.onboarding__picked { padding: .9rem 1rem; border: 1px solid var(--hairline); background: #fff; }
+.onboarding__picked-head { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .6rem; font-family: var(--font-label); }
+.onboarding__picked-head strong { font-size: .95rem; }
+.onboarding__picked-head span { color: var(--ink-faint); font-size: .74rem; }
+.onboarding__picked-empty { margin: 0; color: var(--ink-faint); font-family: var(--font-label); font-size: .78rem; }
+.onboarding__chips { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.onboarding__chip { display: inline-flex; align-items: center; gap: .45rem; max-width: 14rem; padding: .25rem .55rem .25rem .25rem; border: 1px solid var(--ink); background: #fff; color: var(--ink); font-family: var(--font-label); font-size: .74rem; cursor: pointer; }
+.onboarding__chip:not(:disabled):hover { background: var(--ink); color: #fff; }
+.onboarding__chip-thumb { flex: none; width: 1.6rem; }
+.onboarding__chip-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onboarding__search .content-search__results { max-height: 26rem; }
+.content-search__item--selected { background: #ececec; }
+.content-search__item--selected .content-search__meta strong::before { content: '✓ '; }
+.onboarding__actions { display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; }
+.onboarding__actions .solid-button { min-width: 12rem; padding-block: .75em; }
+.onboarding__actions .solid-button:disabled { opacity: .4; cursor: not-allowed; }
+.onboarding__error { margin: 0; color: #d4344a; font-family: var(--font-label); font-size: .78rem; }
 .button-list { display: grid; gap: .75rem; }
 
 /* ---------- 반응형 ---------- */
