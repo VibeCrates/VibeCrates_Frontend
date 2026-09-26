@@ -114,7 +114,11 @@ export function useSaveBoard() {
 
 /**
  * 보드 좋아요/취소. 이미 저장된 보드는 boardId로, DB에 없는 보드는 제목·콘텐츠로 저장까지 함께 요청한다.
- * 성공하면 인기 보드 캐시의 좋아요 수를 갱신해 타일 표시가 즉시 맞춰진다.
+ *
+ * 성공하면 인기 보드 캐시를 두 단계로 맞춘다.
+ * 1. 목록에 있는 보드의 좋아요 수를 바로 고친다 — 타일 숫자가 서버 응답을 기다리지 않고 맞춰진다.
+ * 2. 목록을 다시 받아온다 — 숫자만 고쳐서는 순서가 바뀌지 않고, 목록 밖의 보드(추천·검색 보드)가
+ *    순위에 들어오는 것도 반영되지 않는다. 순위는 서버가 정한다.
  */
 export function useBoardLike() {
   const queryClient = useQueryClient()
@@ -141,6 +145,7 @@ export function useBoardLike() {
               : board,
           ),
       )
+      void queryClient.invalidateQueries({ queryKey: POPULAR_BOARDS_KEY })
     },
   })
 }
