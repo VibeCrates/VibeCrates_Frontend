@@ -53,6 +53,15 @@ export function BoardExpandModal({
         backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
+        // 콜라주 위의 "수정" 버튼과 콘텐츠 설명(종류·제목·연도)은 평소엔 숨어 있지만, 캡처 순간
+        // 포커스가 남아 있으면 보인다. 보드 제목 외의 글자가 사진에 들어가지 않도록 아예 뺀다.
+        ignoreElements: (element) => element.hasAttribute('data-capture-exclude'),
+        // 캡처 전용 제목은 화면에서 숨겨 두고, html2canvas가 만든 복제본에서만 드러낸다.
+        onclone: (_document, element) => {
+          element.querySelectorAll<HTMLElement>('[data-capture-only]').forEach((node) => {
+            node.hidden = false
+          })
+        },
       })
       const link = document.createElement('a')
       link.download = `${board.title || 'crates-board'}.png`
@@ -108,7 +117,7 @@ export function BoardExpandModal({
       <div className="board-modal__backdrop" onClick={onClose} aria-hidden="true" />
 
       <div className="board-modal__panel">
-        {/* 버튼과 상세 패널은 캡처 영역 밖에 둔다. PNG에는 제목과 콜라주만 담긴다. */}
+        {/* 버튼과 상세 패널은 캡처 영역 밖에 둔다. PNG에는 보드 제목과 콜라주만 담긴다. */}
         <div className="board-modal__actions">
           <BoardLikeButton
             boardId={board.boardId}
@@ -151,8 +160,18 @@ export function BoardExpandModal({
                 {board.contents.length} pieces · 좋아요 {board.likeCount.toLocaleString()}
               </p>
             </div>
-            {/* 캡처 대상은 콜라주뿐이다. 제목/pieces/좋아요 수는 화면에만 보이고 PNG에는 담기지 않는다. */}
+            {/*
+              캡처 대상은 보드 제목과 콜라주뿐이다. 위의 제목 영역(CRATE NO., 제목 수정 버튼·입력창,
+              pieces·좋아요 수)은 화면에만 보이고 PNG에는 담기지 않는다.
+            */}
             <div className="board-modal__canvas" ref={captureAreaRef}>
+              {/*
+                PNG에만 들어가는 제목. 위의 제목은 수정 버튼과 입력창이 섞여 있어 그대로 찍으면 글자가 따라 들어간다.
+                화면에서는 제목이 이미 보이므로 숨겨 두고, 캡처 복제본에서만 보이게 한다(handleCapture의 onclone).
+              */}
+              <h2 className="board-modal__capture-title" data-capture-only hidden>
+                {board.title || '제목 없는 보드'}
+              </h2>
               <BoardCollage
                 contents={board.contents}
                 interactive
