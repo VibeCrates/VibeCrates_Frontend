@@ -104,6 +104,8 @@ export function BoardCollage({
             {onContentEdit && (
               <button
                 className="collage-item__edit"
+                // 보드 사진(PNG)에는 담지 않는다. BoardExpandModal의 캡처가 이 표시가 붙은 요소를 뺀다.
+                data-capture-exclude
                 type="button"
                 onClick={() => onContentEdit(content, index)}
                 aria-label={`${content.title || '제목 미상'} 교체하기`}
@@ -112,7 +114,7 @@ export function BoardCollage({
               </button>
             )}
             {interactive && (
-              <figcaption className="collage-item__details">
+              <figcaption className="collage-item__details" data-capture-exclude>
                 <span className={`domain-pill domain-pill--${content.contentType.toLowerCase()}`}>
                   {getDomainLabel(content.contentType)}
                 </span>

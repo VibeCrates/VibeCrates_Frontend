@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ContentSummary, ContentType } from '../../../shared/types/content'
 import {
+  getOnboardingContents,
   getOnboardingStatus,
   submitInitialContents,
   type OnboardingStatus,
@@ -18,6 +20,18 @@ export function useOnboardingStatus(enabled: boolean) {
     queryKey: ONBOARDING_STATUS_KEY,
     queryFn: getOnboardingStatus,
     enabled,
+    staleTime: Infinity,
+  })
+}
+
+/**
+ * 한 종류의 후보 콘텐츠. 후보는 시딩으로 정해져 바뀌지 않으므로 한 번 받으면 다시 묻지 않는다.
+ * 탭을 오가도 다시 요청하지 않는다.
+ */
+export function useOnboardingContents(type: ContentType) {
+  return useQuery<ContentSummary[]>({
+    queryKey: ['contents', 'onboarding', type],
+    queryFn: () => getOnboardingContents(type),
     staleTime: Infinity,
   })
 }
