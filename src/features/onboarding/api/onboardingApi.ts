@@ -1,4 +1,5 @@
 import { apiRequest } from '../../../shared/api'
+import type { ContentSummary, ContentType } from '../../../shared/types/content'
 
 /** 가입 때 고를 수 있는 콘텐츠 수. 백엔드 UserVectorService와 같은 값이다. */
 export const MIN_INITIAL_CONTENTS = 1
@@ -11,6 +12,14 @@ export interface OnboardingStatus {
 
 export function getOnboardingStatus(): Promise<OnboardingStatus> {
   return apiRequest('/api/users/me/onboarding')
+}
+
+/**
+ * 가입 때 고를 수 있는 한 종류의 후보 콘텐츠. 인기순이며 종류마다 최대 200개다.
+ * 서버는 이 목록 밖의 콘텐츠를 고르면 거절한다.
+ */
+export function getOnboardingContents(type: ContentType): Promise<ContentSummary[]> {
+  return apiRequest(`/api/contents/onboarding?type=${encodeURIComponent(type)}`)
 }
 
 /** 고른 콘텐츠의 평균이 첫 취향 벡터가 된다. 사용자마다 한 번만 받는다. */

@@ -2,18 +2,27 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { Brand } from '../../../app/components/Brand'
 import { ApiError } from '../../../shared/api'
-import type { ContentSummary } from '../../../shared/types/content'
+import type { ContentSummary, ContentType } from '../../../shared/types/content'
 import { useAccessToken } from '../../auth/model/useAccessToken'
 import { ContentArtwork } from '../../board/components/ContentArtwork'
-import { MIN_SEARCH_LENGTH } from '../../content/api/contentApi'
-import { useContentSearch } from '../../content/model/contentQueries'
-import { useDebouncedValue } from '../../content/model/useDebouncedValue'
 import { MAX_INITIAL_CONTENTS, MIN_INITIAL_CONTENTS } from '../api/onboardingApi'
-import { useOnboardingStatus, useSubmitInitialContents } from '../model/onboardingQueries'
+import {
+  useOnboardingContents,
+  useOnboardingStatus,
+  useSubmitInitialContents,
+} from '../model/onboardingQueries'
+
+/** 종류별 탭. 후보는 종류마다 인기순 200개다. */
+const TABS: { type: ContentType; label: string }[] = [
+  { type: 'BOOK', label: '책' },
+  { type: 'MOVIE', label: '영화' },
+  { type: 'MUSIC', label: '음악' },
+]
 
 /**
  * 가입 직후 취향 콘텐츠를 고르는 화면.
  *
+ * 종류별 인기 콘텐츠를 스크롤하며 고른다. 무엇을 검색할지 모르는 사용자도 바로 고를 수 있다.
  * 고른 콘텐츠(1~10개)의 평균이 첫 취향 벡터가 되고, 그 벡터로 첫 추천이 만들어진다.
  * 건너뛸 수 없다 — 고르기 전에는 추천에 쓸 벡터가 없어 다른 화면에 들어갈 수 없다.
  */
@@ -23,16 +32,12 @@ export function OnboardingPage() {
   const status = useOnboardingStatus(Boolean(accessToken))
   const submit = useSubmitInitialContents()
 
-  const [keyword, setKeyword] = useState('')
-  // 한 글자마다 요청하면 타이핑 한 번에 대여섯 번이 나간다.
-  const debouncedKeyword = useDebouncedValue(keyword)
-  const search = useContentSearch(debouncedKeyword)
-  // 고른 순서를 보여주기 위해 배열로 둔다. 개수가 10개뿐이라 includes로 충분하다.
+  const [activeType, setActiveType] = useState<ContentType>(TABS[0].type)
+  const candidates = useOnboardingContents(activeType)
+  // 고른 순서를 보여주기 위해 배열로 둔다. 개수가 10개뿐이라 some으로 충분하다.
+  // 탭을 옮겨도 유지된다 — 종류를 섞어 고를 수 있다.
   const [selected, setSelected] = useState<ContentSummary[]>([])
 
-  const trimmed = debouncedKeyword.trim()
-  const isReady = trimmed.length >= MIN_SEARCH_LENGTH
-  const results = search.data?.pages.flat() ?? []
   const isFull = selected.length >= MAX_INITIAL_CONTENTS
   const canSubmit = selected.length >= MIN_INITIAL_CONTENTS && !submit.isPending
 
@@ -85,7 +90,7 @@ export function OnboardingPage() {
             <span>{isFull ? '최대 개수를 모두 골랐어요' : '고른 콘텐츠'}</span>
           </div>
           {selected.length === 0 ? (
-            <p className="onboarding__picked-empty">아래에서 검색해 골라주세요.</p>
+            <p className="onboarding__picked-empty">아래 목록에서 눌러 골라주세요.</p>
           ) : (
             <ul className="onboarding__chips">
               {selected.map((content) => (
@@ -109,73 +114,56 @@ export function OnboardingPage() {
           )}
         </div>
 
-        <div className="content-search onboarding__search">
-          <input
-            className="content-search__input"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="제목을 영어로 입력 (예: harry potter)"
-            maxLength={100}
-            autoComplete="off"
-            autoFocus
-            disabled={submit.isPending}
-          />
+        <div className="onboarding__catalog">
+          <div className="archive-tabs onboarding__tabs" role="tablist" aria-label="콘텐츠 종류">
+            {TABS.map((tab) => (
+              <button
+                aria-selected={tab.type === activeType}
+                className={`archive-tab ${tab.type === activeType ? 'is-active' : ''}`}
+                key={tab.type}
+                onClick={() => setActiveType(tab.type)}
+                role="tab"
+                type="button"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          <div className="content-search__results">
-            {!isReady ? (
-              <p className="content-search__hint">{MIN_SEARCH_LENGTH}글자 이상 입력해주세요.</p>
-            ) : search.isPending ? (
-              <p className="content-search__hint">검색 중…</p>
-            ) : search.isError ? (
+          <div className="onboarding__grid-scroll" role="tabpanel">
+            {candidates.isPending ? (
+              <p className="content-search__hint">불러오는 중…</p>
+            ) : candidates.isError ? (
               <div className="content-search__hint">
-                <p>검색에 실패했어요.</p>
-                <button type="button" onClick={() => void search.refetch()}>다시 시도</button>
+                <p>목록을 불러오지 못했어요.</p>
+                <button type="button" onClick={() => void candidates.refetch()}>다시 시도</button>
               </div>
-            ) : results.length === 0 ? (
-              <p className="content-search__hint">“{trimmed}”와 맞는 콘텐츠가 없어요.</p>
             ) : (
-              <>
-                <ul className="content-search__list">
-                  {results.map((content) => {
-                    const isSelected = selected.some((item) => item.id === content.id)
+              <ul className="onboarding__grid">
+                {candidates.data.map((content) => {
+                  const isSelected = selected.some((item) => item.id === content.id)
 
-                    return (
-                      <li key={content.id}>
-                        <button
-                          className={`content-search__item ${isSelected ? 'content-search__item--selected' : ''}`}
-                          type="button"
-                          aria-pressed={isSelected}
-                          // 다 고른 뒤에도 이미 고른 것은 눌러서 뺄 수 있어야 한다.
-                          disabled={submit.isPending || (isFull && !isSelected)}
-                          onClick={() => toggle(content)}
-                        >
-                          <span className="content-search__thumb">
-                            <ContentArtwork content={content} />
-                          </span>
-                          <span className="content-search__meta">
-                            <strong>{content.title || '제목 미상'}</strong>
-                            <span>
-                              {content.contentType} · {content.releaseYear ?? '연도 미상'}
-                              {isSelected ? ' · 선택됨' : ''}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-
-                {search.hasNextPage ? (
-                  <button
-                    className="content-search__more"
-                    type="button"
-                    disabled={search.isFetchingNextPage}
-                    onClick={() => void search.fetchNextPage()}
-                  >
-                    {search.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
-                  </button>
-                ) : null}
-              </>
+                  return (
+                    <li key={content.id}>
+                      <button
+                        className={`onboarding__card ${isSelected ? 'onboarding__card--selected' : ''}`}
+                        type="button"
+                        aria-pressed={isSelected}
+                        // 다 고른 뒤에도 이미 고른 것은 눌러서 뺄 수 있어야 한다.
+                        disabled={submit.isPending || (isFull && !isSelected)}
+                        onClick={() => toggle(content)}
+                      >
+                        <span className="onboarding__card-art">
+                          <ContentArtwork content={content} />
+                          {isSelected ? <span className="onboarding__card-check" aria-hidden="true">✓</span> : null}
+                        </span>
+                        <span className="onboarding__card-title">{content.title || '제목 미상'}</span>
+                        <span className="onboarding__card-year">{content.releaseYear ?? '연도 미상'}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
           </div>
         </div>
