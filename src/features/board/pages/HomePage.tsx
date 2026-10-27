@@ -47,6 +47,13 @@ export function HomePage() {
   // 확대에 필요한 데이터(제목·좋아요·콘텐츠 8건)가 이미 목록 응답에 들어 있어
   // 보드 객체를 그대로 들고 있으면 추가 조회 없이 모달을 띄울 수 있다.
   const [expandedBoard, setExpandedBoard] = useState<BoardWithContents | null>(null)
+  // 추천 보드로 연 것인지. 추천 보드는 boardId가 있어도 제목·콘텐츠로 좋아요한다(BoardLikeMode).
+  const [expandedRecommended, setExpandedRecommended] = useState(false)
+
+  function openBoard(board: BoardWithContents, fromRecommended: boolean) {
+    setExpandedBoard(board)
+    setExpandedRecommended(fromRecommended)
+  }
 
   /**
    * 모달에서 좋아요를 눌렀을 때 목록 캐시를 맞춘다.
@@ -56,9 +63,12 @@ export function HomePage() {
    * 인기 보드는 useBoardLike가 자체적으로 캐시를 갱신하므로 여기서 걸리지 않는다.
    */
   function handleModalLike(result: BoardLikeResult) {
+    // 객체 비교로 찾으면 안 된다. 첫 좋아요에서 캐시의 보드가 새 객체로 바뀌어, 같은 모달에서 다시 누른
+    // 결과(취소)가 목록에 반영되지 않는다. 추천 보드 4개는 콘텐츠 구성이 서로 달라 구성으로 찾는다.
+    const expandedContentIds = expandedBoard?.contents.map((content) => content.id).join(',')
     queryClient.setQueryData<BoardWithContents[]>(RECOMMENDED_BOARDS_KEY, (cached) =>
       cached?.map((board) =>
-        board === expandedBoard
+        board.contents.map((content) => content.id).join(',') === expandedContentIds
           ? { ...board, boardId: result.boardId, likeCount: result.likeCount, liked: result.liked }
           : board,
       ),
@@ -71,18 +81,20 @@ export function HomePage() {
   /**
    * 모달에서 콘텐츠를 교체한 결과를 반영한다.
    *
-   * 내 보드가 아니면 서버가 원본을 두고 복제본을 만들기 때문에 boardId가 바뀌어 돌아온다.
+   * 내 보드가 아니면 서버가 원본은 두고 내 보드로 새로 저장하기 때문에 boardId가 바뀌어 돌아온다.
    * 그때 목록(인기·추천)은 원본이 그대로 남아 있어야 맞으므로 캐시는 건드리지 않고,
    * 모달이 보고 있는 보드만 새 것으로 갈아끼운다.
    */
   function handleBoardUpdated(updated: BoardWithContents) {
     setExpandedBoard(updated)
+    // 고친 결과는 내 보드다. 추천 보드처럼 구성으로 좋아요하지 않는다.
+    setExpandedRecommended(false)
 
-    // 내 보드를 그 자리에서 고친 경우(복제가 아닌 경우)에만 목록도 같은 내용으로 맞춘다.
+    // 내 보드를 그 자리에서 고친 경우(새로 저장이 아닌 경우)에만 목록도 같은 내용으로 맞춘다.
     queryClient.setQueryData<BoardWithContents[]>(POPULAR_BOARDS_KEY, (cached) =>
       cached?.map((board) => (board.boardId === updated.boardId ? updated : board)),
     )
-    // 복제되면 내 보드가 하나 늘어난다. 새 보드가 목록의 어디에 들어갈지는 서버가 안다.
+    // 새로 저장되면 내 보드가 하나 늘어난다. 새 보드가 목록의 어디에 들어갈지는 서버가 안다.
     void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
   }
 
@@ -120,7 +132,7 @@ export function HomePage() {
                 <BoardTile
                   board={board}
                   key={board.boardId ?? `unsaved-${index}`}
-                  onOpen={setExpandedBoard}
+                  onOpen={(opened) => openBoard(opened, true)}
                 />
               ))}
             </div>
@@ -151,7 +163,7 @@ export function HomePage() {
           ) : mine.data?.length ? (
             <div className="board-grid" ref={myScrollRef} {...myDragHandlers}>
               {mine.data.map((board) => (
-                <BoardTile board={board} key={board.boardId} onOpen={setExpandedBoard} />
+                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, false)} />
               ))}
             </div>
           ) : (
@@ -174,7 +186,7 @@ export function HomePage() {
           ) : popular.data?.length ? (
             <div className="board-grid" ref={popularScrollRef} {...popularDragHandlers}>
               {popular.data.map((board) => (
-                <BoardTile board={board} key={board.boardId} onOpen={setExpandedBoard} />
+                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, false)} />
               ))}
             </div>
           ) : (
@@ -186,6 +198,7 @@ export function HomePage() {
       {expandedBoard ? (
         <BoardExpandModal
           board={expandedBoard}
+          recommended={expandedRecommended}
           onBoardUpdated={handleBoardUpdated}
           onClose={() => setExpandedBoard(null)}
           onLikeResult={handleModalLike}

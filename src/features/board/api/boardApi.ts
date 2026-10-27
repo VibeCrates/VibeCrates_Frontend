@@ -20,7 +20,7 @@ export function getLikedBoards(count: number): Promise<BoardWithContents[]> {
 /**
  * 보관함 탭. 백엔드 MyBoardFilter와 같은 값이어야 한다.
  *
- * 세 값은 서로 배타적이지 않다. 좋아요한 보드를 고치면 복제본이 내 보드가 되고, 내가 만든
+ * 세 값은 서로 배타적이지 않다. 좋아요한 보드를 고치면 새로 저장된 보드가 내 보드가 되고, 내가 만든
  * 보드에 내가 좋아요를 누를 수도 있어서 LIKED와 CREATED에 동시에 속하는 보드가 정상적으로
  * 존재한다. 각 목록은 "이 조건을 만족하는 보드 전부"라는 뜻이지 나눠 가진 몫이 아니다.
  */
@@ -55,7 +55,11 @@ export function getMyBoards(query: MyBoardsQuery): Promise<PageResponse<BoardWit
 }
 
 export interface BoardLikeResult {
-  boardId: number
+  /**
+   * 좋아요한 보드의 id. 저장 전 보드였다면 새로 생긴 id다.
+   * 취소로 보드가 지워졌으면(좋아요 0개가 된 추천·검색 보드, 주인이 지운 보드의 마지막 좋아요) null이다.
+   */
+  boardId: number | null
   likeCount: number
   liked: boolean
 }
@@ -85,7 +89,7 @@ export function createBoard(input: BoardSaveInput): Promise<BoardWithContents> {
 /**
  * 보드의 제목과 콘텐츠를 통째로 갱신한다. 제목 변경·콘텐츠 교체·순서 변경이 모두 이 요청 하나다.
  *
- * 내 보드가 아니면(추천 보드, 남이 만든 보드) 서버가 원본을 건드리지 않고 복제본을 만든다.
+ * 내 보드가 아니면(추천 보드, 남이 만든 보드) 서버가 원본은 두고 내 보드로 새로 저장한다.
  * 그래서 응답의 boardId가 요청한 boardId와 다를 수 있고, 호출한 쪽은 반드시 이를 반영해야 한다.
  */
 export function updateBoard(
@@ -98,10 +102,27 @@ export function updateBoard(
   })
 }
 
-/** 아직 DB에 없는 보드(오늘의 추천 보드 / 검색 보드)에 좋아요. 저장까지 서버가 처리하고 boardId를 돌려준다. */
+/**
+ * 홈 추천 보드(오늘의 추천 보드)에 좋아요. boardId가 있어도 이 요청을 쓴다.
+ *
+ * 서버가 콘텐츠 구성으로 "있으면 좋아요, 없으면 저장 후 좋아요"를 처리하고 boardId를 돌려준다.
+ * 그 사이 좋아요가 0이 되어 보드가 지워졌어도 실패하지 않는다.
+ */
 export function likeNewBoard(title: string, contentIds: number[]): Promise<BoardLikeResult> {
   return apiRequest('/api/boards/likes', {
     method: 'POST',
     body: JSON.stringify({ title, contentIds }),
   })
 }
+
+/**
+ * 검색 보드에 좋아요. boardId가 있어도 검색 응답의 likeToken으로 보낸다.
+ * 서버는 토큰 안의 검색어·콘텐츠로 저장하므로 제목과 콘텐츠를 따로 보내지 않는다.
+ */
+export function likeSearchBoard(likeToken: string): Promise<BoardLikeResult> {
+  return apiRequest('/api/search/board/likes', {
+    method: 'POST',
+    body: JSON.stringify({ likeToken }),
+  })
+}
+

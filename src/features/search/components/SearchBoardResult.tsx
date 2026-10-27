@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { BoardCollage } from '../../board/components/BoardCollage'
 import { BoardLikeButton } from '../../board/components/BoardLikeButton'
 import { BoardTitleEditor } from '../../board/components/BoardTitleEditor'
@@ -8,10 +9,10 @@ import { MY_BOARDS_KEY } from '../../board/model/boardQueries'
 import { useBoardEditor } from '../../board/model/useBoardEditor'
 import { BOARD_CONTENT_COUNT } from '../../../shared/types/board'
 import type { BoardLikeResult } from '../../board/api/boardApi'
-import type { BoardWithContents } from '../../../shared/types/board'
+import type { BoardWithContents, SearchBoard } from '../../../shared/types/board'
 
 interface SearchBoardResultProps {
-  board: BoardWithContents
+  board: SearchBoard
   /** 좋아요/수정 결과를 이 검색어의 캐시에 반영하기 위해 필요하다. */
   keyword: string
 }
@@ -27,13 +28,14 @@ interface SearchBoardResultProps {
 export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
   const queryClient = useQueryClient()
   const searchQueryKey = ['search', 'board', keyword]
+  const [likeNotice, setLikeNotice] = useState<string | null>(null)
 
   /**
    * 검색 결과는 검색어별로 캐시된다(staleTime 30초). 갱신하지 않으면 홈으로 나갔다가 같은
    * 검색어로 다시 들어왔을 때 예전 응답이 그대로 그려진다. 서버는 이미 올바른 값을 갖고 있다.
    */
   function patchCache(next: Partial<BoardWithContents>) {
-    queryClient.setQueryData<BoardWithContents>(searchQueryKey, (cached) =>
+    queryClient.setQueryData<SearchBoard>(searchQueryKey, (cached) =>
       cached ? { ...cached, ...next } : cached,
     )
   }
@@ -118,12 +120,14 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
         <div className="search-result__actions">
           <BoardLikeButton
             boardId={board.boardId}
-            title={title}
-            contents={board.contents}
+            // 검색 보드는 boardId가 있어도 서명 토큰으로 좋아요한다. 서버가 토큰 안의 검색어·콘텐츠로 저장해서
+            // 그 사이 보드가 지워졌어도 다시 저장된다. 고쳐서 내 보드가 된 뒤에는 그 보드에 boardId로 보낸다.
+            mode={board.owned ? { kind: 'saved' } : { kind: 'search', likeToken: board.likeToken }}
             initialLiked={board.liked}
             initialLikeCount={board.likeCount}
             key={board.boardId ?? 'unsaved'}
             onLikeResult={handleLikeResult}
+            onLikeError={setLikeNotice}
           />
         </div>
       ) : (
@@ -132,7 +136,7 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
         </p>
       )}
 
-      <div className="search-result__notice" aria-live="polite">{editor.notice}</div>
+      <div className="search-result__notice" aria-live="polite">{likeNotice ?? editor.notice}</div>
     </div>
   )
 }
