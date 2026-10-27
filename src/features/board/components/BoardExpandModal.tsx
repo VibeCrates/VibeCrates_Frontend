@@ -13,10 +13,10 @@ import { ContentSearchPanel } from './ContentSearchPanel'
 interface BoardExpandModalProps {
   board: BoardWithContents
   /**
-   * 홈 추천 보드로 연 것인지. 추천 보드는 boardId가 있어도 제목·콘텐츠로 좋아요해야
-   * 그 사이 보드가 지워졌어도 다시 저장된다. 나머지(인기·보관함·내 보드)는 boardId로 보낸다.
+   * 홈 추천 보드로 열었을 때 그 보드의 좋아요 토큰. 추천 보드는 boardId가 있어도 이 토큰으로 좋아요해야
+   * 그 사이 보드가 지워졌어도 다시 저장된다. 나머지(인기·보관함·내 보드)는 없고 boardId로 보낸다.
    */
-  recommended?: boolean
+  recommendLikeToken?: string | null
   onClose: () => void
   /**
    * 좋아요/취소 결과. 아직 저장 전인 보드(추천 보드)는 여기서 boardId가 처음 생기므로,
@@ -40,7 +40,7 @@ interface BoardExpandModalProps {
  */
 export function BoardExpandModal({
   board,
-  recommended = false,
+  recommendLikeToken = null,
   onClose,
   onLikeResult,
   onBoardUpdated,
@@ -156,12 +156,8 @@ export function BoardExpandModal({
             boardId={board.boardId}
             // 고쳐서 내 보드가 된 뒤에는 추천 보드가 아니다. 그때부터는 boardId로 보낸다.
             mode={
-              recommended && !board.owned
-                ? {
-                    kind: 'recommended',
-                    title: board.title || '제목 없는 보드',
-                    contentIds: board.contents.map((content) => content.id),
-                  }
+              recommendLikeToken !== null && !board.owned
+                ? { kind: 'recommended', likeToken: recommendLikeToken }
                 : { kind: 'saved' }
             }
             initialLiked={board.liked}
