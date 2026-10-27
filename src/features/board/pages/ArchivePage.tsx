@@ -116,8 +116,8 @@ export function ArchivePage() {
   /**
    * 콘텐츠를 교체한 결과를 반영한다.
    *
-   * 내 보드가 아니면 서버가 원본을 두고 복제본을 만들어 boardId가 바뀌어 돌아온다.
-   * 그때 보관함에는 원본과 복제본이 둘 다 있어야 하므로 목록을 다시 받고,
+   * 내 보드가 아니면 서버가 원본은 두고 내 보드로 새로 저장해 boardId가 바뀌어 돌아온다.
+   * 그때 보관함에는 원본과 새 보드가 둘 다 있어야 하므로 목록을 다시 받고,
    * 모달이 보고 있는 보드만 새 것으로 갈아끼운다.
    */
   function handleBoardUpdated(updated: BoardWithContents) {

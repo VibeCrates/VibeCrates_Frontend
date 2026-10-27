@@ -9,7 +9,7 @@ import type { ContentSummary } from '../../../shared/types/content'
  * 보드 확대 모달과 검색 결과 페이지가 같은 편집 흐름(포스터 상세 보기, 슬롯 교체, 제목 변경)을
  * 쓰기 때문에, 두 화면이 각자 상태를 들고 있지 않도록 훅으로 뺐다.
  *
- * 저장 결과는 `onSaved`로 올려보낸다. 서버가 복제본을 만들면 boardId가 바뀌어 돌아오므로,
+ * 저장 결과는 `onSaved`로 올려보낸다. 서버가 원본은 두고 내 보드로 새로 저장하면 boardId가 바뀌어 돌아오므로,
  * 화면이 보고 있는 보드를 그 값으로 갈아끼워야 다음 수정이 새 보드에 이어진다.
  */
 export function useBoardEditor(
@@ -32,8 +32,8 @@ export function useBoardEditor(
           setEditingSlot(null)
           setIsRenaming(false)
           setSelected(null)
-          // 원본을 그대로 고쳤는지, 내 보드로 복제됐는지 알려준다.
-          // 복제는 사용자가 요청하지 않은 동작이라 결과를 말해주지 않으면 혼란스럽다.
+          // 원본을 그대로 고쳤는지, 내 보드로 새로 저장됐는지 알려준다.
+          // 새로 저장은 사용자가 요청하지 않은 동작이라 결과를 말해주지 않으면 혼란스럽다.
           setNotice(
             saved.boardId === board.boardId ? '보드를 수정했습니다.' : '내 보드로 저장했습니다.',
           )
