@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas'
 import { useEffect, useRef, useState } from 'react'
 import type { BoardLikeResult } from '../api/boardApi'
 import type { BoardWithContents } from '../../../shared/types/board'
+import { useDeleteBoard } from '../model/boardQueries'
 import { useBoardEditor } from '../model/useBoardEditor'
 import { BoardCollage } from './BoardCollage'
 import { BoardLikeButton } from './BoardLikeButton'
@@ -11,6 +12,11 @@ import { ContentSearchPanel } from './ContentSearchPanel'
 
 interface BoardExpandModalProps {
   board: BoardWithContents
+  /**
+   * 홈 추천 보드로 연 것인지. 추천 보드는 boardId가 있어도 제목·콘텐츠로 좋아요해야
+   * 그 사이 보드가 지워졌어도 다시 저장된다. 나머지(인기·보관함·내 보드)는 boardId로 보낸다.
+   */
+  recommended?: boolean
   onClose: () => void
   /**
    * 좋아요/취소 결과. 아직 저장 전인 보드(추천 보드)는 여기서 boardId가 처음 생기므로,
@@ -22,6 +28,8 @@ interface BoardExpandModalProps {
    * <b>boardId가 바뀌어 돌아올 수 있다</b>. 부모가 이 값으로 화면과 캐시를 맞춰야 한다.
    */
   onBoardUpdated?: (board: BoardWithContents) => void
+  /** 내 보드를 지운 뒤. 모달은 스스로 닫히므로 부모는 화면에 남은 값만 정리하면 된다. */
+  onDeleted?: () => void
 }
 
 /**
@@ -32,14 +40,39 @@ interface BoardExpandModalProps {
  */
 export function BoardExpandModal({
   board,
+  recommended = false,
   onClose,
   onLikeResult,
   onBoardUpdated,
+  onDeleted,
 }: BoardExpandModalProps) {
   const [isCapturing, setIsCapturing] = useState(false)
   const [captureNotice, setCaptureNotice] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
   const captureAreaRef = useRef<HTMLDivElement>(null)
   const editor = useBoardEditor(board, onBoardUpdated)
+  const remove = useDeleteBoard()
+
+  // 주인만 지울 수 있다. 이미 지운 보드(남이 지운 보드를 좋아요해 둔 경우)는 내 것이 아니라 owned가 false다.
+  const canDelete = board.owned === true && board.boardId !== null
+
+  function handleDelete() {
+    if (board.boardId === null || remove.isPending) {
+      return
+    }
+    if (!window.confirm('이 보드를 삭제할까요? 좋아요한 다른 사람의 보관함에는 남을 수 있어요.')) {
+      return
+    }
+    remove.mutate(board.boardId, {
+      onSuccess: () => {
+        onDeleted?.()
+        onClose()
+      },
+      onError: (error) => {
+        setActionNotice(error instanceof Error ? error.message : '보드를 삭제하지 못했어요.')
+      },
+    })
+  }
 
   async function handleCapture() {
     if (!captureAreaRef.current) {
@@ -121,12 +154,33 @@ export function BoardExpandModal({
         <div className="board-modal__actions">
           <BoardLikeButton
             boardId={board.boardId}
-            title={board.title || '제목 없는 보드'}
-            contents={board.contents}
+            // 고쳐서 내 보드가 된 뒤에는 추천 보드가 아니다. 그때부터는 boardId로 보낸다.
+            mode={
+              recommended && !board.owned
+                ? {
+                    kind: 'recommended',
+                    title: board.title || '제목 없는 보드',
+                    contentIds: board.contents.map((content) => content.id),
+                  }
+                : { kind: 'saved' }
+            }
             initialLiked={board.liked}
             initialLikeCount={board.likeCount}
+            deleted={board.deleted}
+            key={board.boardId ?? 'unsaved'}
             onLikeResult={onLikeResult}
+            onLikeError={setActionNotice}
           />
+          {canDelete ? (
+            <button
+              className="outline-button"
+              type="button"
+              disabled={remove.isPending}
+              onClick={handleDelete}
+            >
+              {remove.isPending ? '삭제 중…' : '삭제'}
+            </button>
+          ) : null}
           <button
             className="outline-button"
             type="button"
@@ -207,7 +261,7 @@ export function BoardExpandModal({
         </div>
 
         <div className="board-modal__notice" aria-live="polite">
-          {editor.notice ?? captureNotice}
+          {actionNotice ?? editor.notice ?? captureNotice}
         </div>
       </div>
     </div>

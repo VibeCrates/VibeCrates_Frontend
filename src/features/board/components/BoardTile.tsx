@@ -21,7 +21,10 @@ export function BoardTile({ board, onOpen }: BoardTileProps) {
       </div>
       <div className="board-tile__meta">
         <h3>{board.title || '제목 없는 보드'}</h3>
-        <span>좋아요 {board.likeCount.toLocaleString()}</span>
+        <span>
+          {/* 만든 사람이 지운 보드. 좋아요한 사람의 보관함에만 남아 있다. */}
+          {board.deleted ? '삭제된 보드 · ' : ''}좋아요 {board.likeCount.toLocaleString()}
+        </span>
       </div>
     </button>
   )

@@ -1,15 +1,18 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createBoard,
+  deleteBoard,
   getLikedBoards,
   getMyBoards,
   getRecommendedBoards,
   likeBoard,
   likeNewBoard,
+  likeSearchBoard,
   unlikeBoard,
   updateBoard,
 } from '../api/boardApi'
 import type { BoardLikeResult, BoardSaveInput, MyBoardFilter } from '../api/boardApi'
+import { ApiError } from '../../../shared/api'
 import type { BoardWithContents } from '../../../shared/types/board'
 
 const POPULAR_BOARD_COUNT = 8
@@ -100,7 +103,7 @@ export function usePopularBoards(enabled: boolean) {
  * 보드 저장. 제목 변경·콘텐츠 교체·순서 변경이 모두 이 하나로 처리된다.
  *
  * boardId가 null이면(아직 저장 전인 추천/검색 보드) 고칠 원본이 서버에 없으므로 생성한다.
- * 저장된 보드라도 내 것이 아니면 서버가 복제본을 만들어 돌려주므로, 응답 보드는 요청한 것과
+ * 저장된 보드라도 내 것이 아니면 서버가 원본은 두고 내 보드로 새로 저장해 돌려주므로, 응답 보드는 요청한 것과
  * 다른 id일 수 있다. 어느 목록의 캐시를 갱신할지는 호출하는 화면이 판단해야 해서 여기서는 손대지 않는다.
  */
 export function useSaveBoard() {
@@ -113,12 +116,35 @@ export function useSaveBoard() {
 }
 
 /**
- * 보드 좋아요/취소. 이미 저장된 보드는 boardId로, DB에 없는 보드는 제목·콘텐츠로 저장까지 함께 요청한다.
+ * 좋아요를 어떤 경로로 보낼지. 화면마다 다르다(docs/board-schema.md 11-8).
+ *
+ * - saved: 인기 목록·보관함·내 보드. 이미 저장된 보드라 boardId로 보낸다. 그 사이 지워졌으면
+ *   서버가 "삭제된 보드입니다."로 거절한다.
+ * - recommended: 홈 추천 보드. boardId가 있어도 제목·콘텐츠로 보낸다. 그 사이 좋아요가 0이 되어
+ *   보드가 지워졌어도 서버가 다시 저장한다.
+ * - search: 검색 결과. boardId가 있어도 검색 응답의 서명 토큰으로 보낸다. 이유는 recommended와 같다.
+ *
+ * 취소는 모두 boardId로 한다.
+ */
+export type BoardLikeMode =
+  | { kind: 'saved' }
+  | { kind: 'recommended'; title: string; contentIds: number[] }
+  | { kind: 'search'; likeToken: string }
+
+/** 이미 지워진 보드에 좋아요를 눌렀을 때 서버가 돌려주는 거절인지. */
+export function isDeletedBoardError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && error.message.startsWith('삭제된 보드')
+}
+
+/**
+ * 보드 좋아요/취소.
  *
  * 성공하면 인기 보드 캐시를 두 단계로 맞춘다.
  * 1. 목록에 있는 보드의 좋아요 수를 바로 고친다 — 타일 숫자가 서버 응답을 기다리지 않고 맞춰진다.
  * 2. 목록을 다시 받아온다 — 숫자만 고쳐서는 순서가 바뀌지 않고, 목록 밖의 보드(추천·검색 보드)가
- *    순위에 들어오는 것도 반영되지 않는다. 순위는 서버가 정한다.
+ *    순위에 들어오는 것도 반영되지 않는다. 취소로 보드가 지워진 경우(응답 boardId가 null)도 이때 빠진다.
+ *
+ * 지워진 보드라 거절되면 인기 목록과 내 보드 목록을 다시 받는다. 화면에 남아 있던 그 보드가 빠진다.
  */
 export function useBoardLike() {
   const queryClient = useQueryClient()
@@ -127,24 +153,61 @@ export function useBoardLike() {
     mutationFn: (input: {
       boardId: number | null
       liked: boolean
-      title: string
-      contentIds: number[]
+      mode: BoardLikeMode
     }): Promise<BoardLikeResult> => {
-      if (input.boardId === null) {
-        return likeNewBoard(input.title, input.contentIds)
+      if (input.liked) {
+        if (input.boardId === null) {
+          return Promise.reject(new Error('저장되지 않은 보드는 좋아요를 취소할 수 없습니다.'))
+        }
+        return unlikeBoard(input.boardId)
       }
-      return input.liked ? unlikeBoard(input.boardId) : likeBoard(input.boardId)
+
+      switch (input.mode.kind) {
+        case 'recommended':
+          return likeNewBoard(input.mode.title, input.mode.contentIds)
+        case 'search':
+          return likeSearchBoard(input.mode.likeToken)
+        case 'saved':
+          if (input.boardId === null) {
+            return Promise.reject(new Error('저장되지 않은 보드입니다.'))
+          }
+          return likeBoard(input.boardId)
+      }
     },
     onSuccess: (result) => {
-      queryClient.setQueryData<BoardWithContents[]>(
-        POPULAR_BOARDS_KEY,
-        (boards) =>
-          boards?.map((board) =>
-            board.boardId === result.boardId
-              ? { ...board, likeCount: result.likeCount, liked: result.liked }
-              : board,
-          ),
-      )
+      if (result.boardId !== null) {
+        queryClient.setQueryData<BoardWithContents[]>(
+          POPULAR_BOARDS_KEY,
+          (boards) =>
+            boards?.map((board) =>
+              board.boardId === result.boardId
+                ? { ...board, likeCount: result.likeCount, liked: result.liked }
+                : board,
+            ),
+        )
+      }
+      void queryClient.invalidateQueries({ queryKey: POPULAR_BOARDS_KEY })
+    },
+    onError: (error) => {
+      if (isDeletedBoardError(error)) {
+        void queryClient.invalidateQueries({ queryKey: POPULAR_BOARDS_KEY })
+        void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
+      }
+    },
+  })
+}
+
+/**
+ * 내 보드 삭제. 지운 보드는 내 보관함과 인기 목록에서 빠지므로 두 목록을 다시 받는다.
+ * (다른 사람이 좋아요해 둔 보드라면 그 사람들의 보관함에는 남는다.)
+ */
+export function useDeleteBoard() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (boardId: number) => deleteBoard(boardId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
       void queryClient.invalidateQueries({ queryKey: POPULAR_BOARDS_KEY })
     },
   })
