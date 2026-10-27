@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas'
 import { useEffect, useRef, useState } from 'react'
 import type { BoardLikeResult } from '../api/boardApi'
 import type { BoardWithContents } from '../../../shared/types/board'
+import { useDeleteBoard } from '../model/boardQueries'
 import { useBoardEditor } from '../model/useBoardEditor'
 import { BoardCollage } from './BoardCollage'
 import { BoardLikeButton } from './BoardLikeButton'
@@ -27,6 +28,8 @@ interface BoardExpandModalProps {
    * <b>boardId가 바뀌어 돌아올 수 있다</b>. 부모가 이 값으로 화면과 캐시를 맞춰야 한다.
    */
   onBoardUpdated?: (board: BoardWithContents) => void
+  /** 내 보드를 지운 뒤. 모달은 스스로 닫히므로 부모는 화면에 남은 값만 정리하면 된다. */
+  onDeleted?: () => void
 }
 
 /**
@@ -41,12 +44,35 @@ export function BoardExpandModal({
   onClose,
   onLikeResult,
   onBoardUpdated,
+  onDeleted,
 }: BoardExpandModalProps) {
   const [isCapturing, setIsCapturing] = useState(false)
   const [captureNotice, setCaptureNotice] = useState<string | null>(null)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
   const captureAreaRef = useRef<HTMLDivElement>(null)
   const editor = useBoardEditor(board, onBoardUpdated)
+  const remove = useDeleteBoard()
+
+  // 주인만 지울 수 있다. 이미 지운 보드(남이 지운 보드를 좋아요해 둔 경우)는 내 것이 아니라 owned가 false다.
+  const canDelete = board.owned === true && board.boardId !== null
+
+  function handleDelete() {
+    if (board.boardId === null || remove.isPending) {
+      return
+    }
+    if (!window.confirm('이 보드를 삭제할까요? 좋아요한 다른 사람의 보관함에는 남을 수 있어요.')) {
+      return
+    }
+    remove.mutate(board.boardId, {
+      onSuccess: () => {
+        onDeleted?.()
+        onClose()
+      },
+      onError: (error) => {
+        setActionNotice(error instanceof Error ? error.message : '보드를 삭제하지 못했어요.')
+      },
+    })
+  }
 
   async function handleCapture() {
     if (!captureAreaRef.current) {
@@ -145,6 +171,16 @@ export function BoardExpandModal({
             onLikeResult={onLikeResult}
             onLikeError={setActionNotice}
           />
+          {canDelete ? (
+            <button
+              className="outline-button"
+              type="button"
+              disabled={remove.isPending}
+              onClick={handleDelete}
+            >
+              {remove.isPending ? '삭제 중…' : '삭제'}
+            </button>
+          ) : null}
           <button
             className="outline-button"
             type="button"

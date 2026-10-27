@@ -126,3 +126,10 @@ export function likeSearchBoard(likeToken: string): Promise<BoardLikeResult> {
   })
 }
 
+/**
+ * 내 보드를 지운다. 주인만 할 수 있다.
+ * 다른 사람의 좋아요가 남아 있으면 그 사람들의 보관함에는 남고, 마지막 좋아요가 취소될 때 완전히 지워진다.
+ */
+export function deleteBoard(boardId: number): Promise<void> {
+  return apiRequest(`/api/boards/${encodeURIComponent(boardId)}`, { method: 'DELETE' })
+}

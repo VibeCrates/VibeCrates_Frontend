@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createBoard,
+  deleteBoard,
   getLikedBoards,
   getMyBoards,
   getRecommendedBoards,
@@ -196,3 +197,18 @@ export function useBoardLike() {
   })
 }
 
+/**
+ * 내 보드 삭제. 지운 보드는 내 보관함과 인기 목록에서 빠지므로 두 목록을 다시 받는다.
+ * (다른 사람이 좋아요해 둔 보드라면 그 사람들의 보관함에는 남는다.)
+ */
+export function useDeleteBoard() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (boardId: number) => deleteBoard(boardId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: MY_BOARDS_PREFIX })
+      void queryClient.invalidateQueries({ queryKey: POPULAR_BOARDS_KEY })
+    },
+  })
+}
