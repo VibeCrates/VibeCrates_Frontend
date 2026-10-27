@@ -35,3 +35,13 @@ export interface BoardWithContents {
 export interface SearchBoard extends BoardWithContents {
   likeToken: string
 }
+
+/**
+ * 홈 추천 보드(오늘의 추천 보드). 검색 결과 보드처럼 좋아요할 때 보낼 서버 서명(likeToken)이 붙어 있다.
+ *
+ * 좋아요는 boardId가 있어도 항상 이 토큰으로 보낸다. 서버가 토큰 안의 제목·콘텐츠로 저장하므로
+ * 요청을 조작해 다른 제목이나 구성으로 추천 보드를 만들 수 없다.
+ */
+export interface RecommendedBoard extends BoardWithContents {
+  likeToken: string
+}

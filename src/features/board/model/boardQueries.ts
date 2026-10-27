@@ -6,7 +6,7 @@ import {
   getMyBoards,
   getRecommendedBoards,
   likeBoard,
-  likeNewBoard,
+  likeRecommendedBoard,
   likeSearchBoard,
   unlikeBoard,
   updateBoard,
@@ -120,7 +120,7 @@ export function useSaveBoard() {
  *
  * - saved: 인기 목록·보관함·내 보드. 이미 저장된 보드라 boardId로 보낸다. 그 사이 지워졌으면
  *   서버가 "삭제된 보드입니다."로 거절한다.
- * - recommended: 홈 추천 보드. boardId가 있어도 제목·콘텐츠로 보낸다. 그 사이 좋아요가 0이 되어
+ * - recommended: 홈 추천 보드. boardId가 있어도 추천 응답의 서명 토큰으로 보낸다. 그 사이 좋아요가 0이 되어
  *   보드가 지워졌어도 서버가 다시 저장한다.
  * - search: 검색 결과. boardId가 있어도 검색 응답의 서명 토큰으로 보낸다. 이유는 recommended와 같다.
  *
@@ -128,7 +128,7 @@ export function useSaveBoard() {
  */
 export type BoardLikeMode =
   | { kind: 'saved' }
-  | { kind: 'recommended'; title: string; contentIds: number[] }
+  | { kind: 'recommended'; likeToken: string }
   | { kind: 'search'; likeToken: string }
 
 /** 이미 지워진 보드에 좋아요를 눌렀을 때 서버가 돌려주는 거절인지. */
@@ -164,7 +164,7 @@ export function useBoardLike() {
 
       switch (input.mode.kind) {
         case 'recommended':
-          return likeNewBoard(input.mode.title, input.mode.contentIds)
+          return likeRecommendedBoard(input.mode.likeToken)
         case 'search':
           return likeSearchBoard(input.mode.likeToken)
         case 'saved':

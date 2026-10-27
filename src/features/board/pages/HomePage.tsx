@@ -19,7 +19,7 @@ import {
 } from '../model/boardQueries'
 import { useDragScroll } from '../model/useDragScroll'
 import type { BoardLikeResult } from '../api/boardApi'
-import type { BoardWithContents } from '../../../shared/types/board'
+import type { BoardWithContents, RecommendedBoard } from '../../../shared/types/board'
 
 function LoadingTiles({ count = 4 }: { count?: number }) {
   return (
@@ -47,12 +47,12 @@ export function HomePage() {
   // 확대에 필요한 데이터(제목·좋아요·콘텐츠 8건)가 이미 목록 응답에 들어 있어
   // 보드 객체를 그대로 들고 있으면 추가 조회 없이 모달을 띄울 수 있다.
   const [expandedBoard, setExpandedBoard] = useState<BoardWithContents | null>(null)
-  // 추천 보드로 연 것인지. 추천 보드는 boardId가 있어도 제목·콘텐츠로 좋아요한다(BoardLikeMode).
-  const [expandedRecommended, setExpandedRecommended] = useState(false)
+  // 추천 보드로 열었으면 그 보드의 좋아요 토큰. 추천 보드는 boardId가 있어도 토큰으로 좋아요한다(BoardLikeMode).
+  const [expandedLikeToken, setExpandedLikeToken] = useState<string | null>(null)
 
-  function openBoard(board: BoardWithContents, fromRecommended: boolean) {
+  function openBoard(board: BoardWithContents, recommendLikeToken: string | null) {
     setExpandedBoard(board)
-    setExpandedRecommended(fromRecommended)
+    setExpandedLikeToken(recommendLikeToken)
   }
 
   /**
@@ -66,7 +66,7 @@ export function HomePage() {
     // 객체 비교로 찾으면 안 된다. 첫 좋아요에서 캐시의 보드가 새 객체로 바뀌어, 같은 모달에서 다시 누른
     // 결과(취소)가 목록에 반영되지 않는다. 추천 보드 4개는 콘텐츠 구성이 서로 달라 구성으로 찾는다.
     const expandedContentIds = expandedBoard?.contents.map((content) => content.id).join(',')
-    queryClient.setQueryData<BoardWithContents[]>(RECOMMENDED_BOARDS_KEY, (cached) =>
+    queryClient.setQueryData<RecommendedBoard[]>(RECOMMENDED_BOARDS_KEY, (cached) =>
       cached?.map((board) =>
         board.contents.map((content) => content.id).join(',') === expandedContentIds
           ? { ...board, boardId: result.boardId, likeCount: result.likeCount, liked: result.liked }
@@ -87,8 +87,8 @@ export function HomePage() {
    */
   function handleBoardUpdated(updated: BoardWithContents) {
     setExpandedBoard(updated)
-    // 고친 결과는 내 보드다. 추천 보드처럼 구성으로 좋아요하지 않는다.
-    setExpandedRecommended(false)
+    // 고친 결과는 내 보드다. 추천 보드처럼 토큰으로 좋아요하지 않는다.
+    setExpandedLikeToken(null)
 
     // 내 보드를 그 자리에서 고친 경우(새로 저장이 아닌 경우)에만 목록도 같은 내용으로 맞춘다.
     queryClient.setQueryData<BoardWithContents[]>(POPULAR_BOARDS_KEY, (cached) =>
@@ -132,7 +132,7 @@ export function HomePage() {
                 <BoardTile
                   board={board}
                   key={board.boardId ?? `unsaved-${index}`}
-                  onOpen={(opened) => openBoard(opened, true)}
+                  onOpen={(opened) => openBoard(opened, board.likeToken)}
                 />
               ))}
             </div>
@@ -163,7 +163,7 @@ export function HomePage() {
           ) : mine.data?.length ? (
             <div className="board-grid" ref={myScrollRef} {...myDragHandlers}>
               {mine.data.map((board) => (
-                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, false)} />
+                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, null)} />
               ))}
             </div>
           ) : (
@@ -186,7 +186,7 @@ export function HomePage() {
           ) : popular.data?.length ? (
             <div className="board-grid" ref={popularScrollRef} {...popularDragHandlers}>
               {popular.data.map((board) => (
-                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, false)} />
+                <BoardTile board={board} key={board.boardId} onOpen={(opened) => openBoard(opened, null)} />
               ))}
             </div>
           ) : (
@@ -198,7 +198,7 @@ export function HomePage() {
       {expandedBoard ? (
         <BoardExpandModal
           board={expandedBoard}
-          recommended={expandedRecommended}
+          recommendLikeToken={expandedLikeToken}
           onBoardUpdated={handleBoardUpdated}
           onClose={() => setExpandedBoard(null)}
           onLikeResult={handleModalLike}

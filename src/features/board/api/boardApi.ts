@@ -1,6 +1,6 @@
 import { apiRequest } from '../../../shared/api'
 import type { PageResponse } from '../../../shared/types/api'
-import type { BoardWithContents } from '../../../shared/types/board'
+import type { BoardWithContents, RecommendedBoard } from '../../../shared/types/board'
 
 /**
  * 사용자 취향 벡터 기반 "오늘의 추천 보드" 4개.
@@ -9,7 +9,7 @@ import type { BoardWithContents } from '../../../shared/types/board'
  * 새로고침해도 하트가 빈 채로 그려지지 않는다.
  * 보드당 8건, 노출 개수 모두 서버가 정하므로 파라미터가 없다.
  */
-export function getRecommendedBoards(): Promise<BoardWithContents[]> {
+export function getRecommendedBoards(): Promise<RecommendedBoard[]> {
   return apiRequest('/api/boards/recommendation/user')
 }
 
@@ -103,15 +103,15 @@ export function updateBoard(
 }
 
 /**
- * 홈 추천 보드(오늘의 추천 보드)에 좋아요. boardId가 있어도 이 요청을 쓴다.
+ * 홈 추천 보드(오늘의 추천 보드)에 좋아요. boardId가 있어도 추천 응답의 likeToken으로 보낸다.
  *
- * 서버가 콘텐츠 구성으로 "있으면 좋아요, 없으면 저장 후 좋아요"를 처리하고 boardId를 돌려준다.
+ * 서버가 토큰 안의 제목·콘텐츠로 "있으면 좋아요, 없으면 저장 후 좋아요"를 처리하고 boardId를 돌려준다.
  * 그 사이 좋아요가 0이 되어 보드가 지워졌어도 실패하지 않는다.
  */
-export function likeNewBoard(title: string, contentIds: number[]): Promise<BoardLikeResult> {
+export function likeRecommendedBoard(likeToken: string): Promise<BoardLikeResult> {
   return apiRequest('/api/boards/likes', {
     method: 'POST',
-    body: JSON.stringify({ title, contentIds }),
+    body: JSON.stringify({ likeToken }),
   })
 }
 
