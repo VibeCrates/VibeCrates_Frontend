@@ -123,7 +123,10 @@ button:disabled { cursor: not-allowed; opacity: .35; }
 .artwork { position: relative; width: 100%; min-height: 3rem; overflow: hidden; aspect-ratio: 3 / 4; background: var(--surface); box-shadow: 0 10px 16px rgba(0,0,0,.32); }
 .artwork img { display: block; width: 100%; height: 100%; object-fit: cover; }
 /* 콜라주에서는 표지를 3:4로 자르지 않고 원본 비율 그대로 보여 준다.
-   이미지가 없거나 깨져 대체 표지를 그릴 때는 기댈 원본 비율이 없으므로 3:4를 그대로 둔다. */
+   이미지가 없거나 깨져 대체 표지를 그릴 때는 기댈 원본 비율이 없으므로, 그 종류 표지의 흔한 비율을 쓴다
+   (영화 포스터·책 표지 2:3, 앨범 1:1). 그래야 진짜 표지 사이에서 크기와 모양이 튀지 않는다. */
+.collage-item .artwork { aspect-ratio: 2 / 3; }
+.collage-item .artwork--music { aspect-ratio: 1 / 1; }
 .collage-item .artwork:has(img) { aspect-ratio: auto; min-height: 0; }
 .collage-item .artwork img { height: auto; object-fit: contain; }
 .artwork__fallback { display: flex; flex-direction: column; justify-content: space-between; width: 100%; height: 100%; padding: 10%; background: var(--tag-movie); color: #fff; }
