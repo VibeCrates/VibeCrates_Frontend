@@ -41,7 +41,7 @@ async function unwrapApiResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok || !payload.success) {
-    throw new ApiError(response.status, payload.message)
+    throw new ApiError(response.status, payload.message, payload.data)
   }
 
   return payload.data as T

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { BoardCollage } from '../../board/components/BoardCollage'
+import { BoardEditBar } from '../../board/components/BoardEditBar'
 import { BoardLikeButton } from '../../board/components/BoardLikeButton'
 import { BoardTitleEditor } from '../../board/components/BoardTitleEditor'
 import { ContentDetailPanel } from '../../board/components/ContentDetailPanel'
@@ -23,7 +24,7 @@ interface SearchBoardResultProps {
  * 부모가 검색어를 key로 넘겨서, 검색어가 바뀌면 이 컴포넌트가 통째로 다시 마운트된다.
  * 열어둔 상세 패널이나 앞선 검색어의 좋아요 상태가 남지 않게 하기 위해서다.
  *
- * 편집(슬롯 교체·제목 변경)은 보드 확대 모달과 같은 useBoardEditor를 쓴다.
+ * 편집(슬롯 교체·제목 변경·배치 변경)은 보드 확대 모달과 같은 useBoardEditor를 쓴다. 저장 버튼을 눌러야 반영된다.
  */
 export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
   const queryClient = useQueryClient()
@@ -62,7 +63,8 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
   // 서버는 보드를 8건 고정으로 검증한다. 모자란 채로 좋아요를 누르면 400이 떨어지므로
   // 버튼을 내주지 않고 이유를 대신 보여준다. (Qdrant에 벡터가 덜 적재된 상태에서 발생)
   const canSave = board.contents.length === BOARD_CONTENT_COUNT
-  const title = board.title || '검색 결과'
+  const title = editor.draft.title || '검색 결과'
+  const ownBoard = board.owned === true && board.boardId !== null
 
   return (
     <div className="search-result">
@@ -82,20 +84,21 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
       <div className="search-result__stage">
         <div className="search-result__canvas">
           <BoardCollage
-            contents={board.contents}
+            contents={editor.draft.contents}
+            layout={editor.draft.layout}
             interactive
             onContentSelect={editor.setSelected}
-            onContentEdit={
-              // 8건이 안 되면 저장 자체가 불가능하므로 수정도 열지 않는다.
-              canSave ? (_content, slotIndex) => editor.startSlotEdit(slotIndex) : undefined
-            }
+            // 8건이 안 되면 저장 자체가 불가능하므로 수정·배치 변경도 열지 않는다.
+            onContentEdit={canSave ? (_content, slotIndex) => editor.startSlotEdit(slotIndex) : undefined}
+            onLayoutChange={canSave ? editor.changeLayout : undefined}
           />
+          {canSave ? <BoardEditBar editor={editor} ownBoard={ownBoard} /> : null}
         </div>
 
-        {editor.editingSlot !== null && board.contents[editor.editingSlot] ? (
+        {editor.editingSlot !== null && editor.draft.contents[editor.editingSlot] ? (
           <ContentSearchPanel
-            boardContentIds={board.contents.map((content) => content.id)}
-            current={board.contents[editor.editingSlot]}
+            boardContentIds={editor.draft.contents.map((content) => content.id)}
+            current={editor.draft.contents[editor.editingSlot]}
             isSaving={editor.isSaving}
             key={editor.editingSlot}
             onClose={editor.cancelSlotEdit}
@@ -110,8 +113,10 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
         ) : (
           <p className="search-result__hint">
             포스터를 클릭하면 상세 정보를 볼 수 있어요.
+            포스터를 끌어 옮기고, 왼쪽 위 손잡이로 돌릴 수 있어요(휴대폰은 길게 눌러 옮기기).
             포스터에 마우스를 올리면 수정 버튼이 나타납니다.
-            {board.boardId === null ? ' 수정하면 내 보드로 저장됩니다.' : ''}
+            바꾼 제목·콘텐츠·배치는 저장 버튼을 눌러야 반영됩니다.
+            {ownBoard ? '' : ' 저장하면 원본은 두고 내 보드로 저장됩니다.'}
           </p>
         )}
       </div>

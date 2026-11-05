@@ -5,6 +5,7 @@ import type { BoardWithContents } from '../../../shared/types/board'
 import { useDeleteBoard } from '../model/boardQueries'
 import { useBoardEditor } from '../model/useBoardEditor'
 import { BoardCollage } from './BoardCollage'
+import { BoardEditBar } from './BoardEditBar'
 import { BoardLikeButton } from './BoardLikeButton'
 import { BoardTitleEditor } from './BoardTitleEditor'
 import { ContentDetailPanel } from './ContentDetailPanel'
@@ -24,7 +25,7 @@ interface BoardExpandModalProps {
    */
   onLikeResult?: (result: BoardLikeResult) => void
   /**
-   * 제목/콘텐츠를 저장한 결과. 내 보드가 아니거나 아직 저장 전이면 서버가 새 보드를 만들기 때문에
+   * 제목/콘텐츠/배치를 저장한 결과. 내 보드가 아니거나 아직 저장 전이면 서버가 새 보드를 만들기 때문에
    * <b>boardId가 바뀌어 돌아올 수 있다</b>. 부모가 이 값으로 화면과 캐시를 맞춰야 한다.
    */
   onBoardUpdated?: (board: BoardWithContents) => void
@@ -55,6 +56,14 @@ export function BoardExpandModal({
 
   // 주인만 지울 수 있다. 이미 지운 보드(남이 지운 보드를 좋아요해 둔 경우)는 내 것이 아니라 owned가 false다.
   const canDelete = board.owned === true && board.boardId !== null
+
+  /** 저장하지 않은 변경이 있으면 닫기 전에 묻는다. 배경 클릭·닫기 버튼·Escape가 모두 이 길로 온다. */
+  function requestClose() {
+    if (editor.isDirty && !window.confirm('저장하지 않은 변경이 있어요. 저장하지 않고 닫을까요?')) {
+      return
+    }
+    onClose()
+  }
 
   function handleDelete() {
     if (board.boardId === null || remove.isPending) {
@@ -121,13 +130,13 @@ export function BoardExpandModal({
       } else if (editor.selected) {
         editor.setSelected(null)
       } else {
-        onClose()
+        requestClose()
       }
     }
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [editor, onClose])
+  })
 
   // 뒤쪽 홈 화면이 같이 스크롤되지 않도록 막는다. 모달이 열려 있는 동안 한 번만 적용하면 되므로
   // Escape 처리와 분리해서 selected가 바뀔 때마다 body 스타일을 건드리지 않게 한다.
@@ -147,7 +156,7 @@ export function BoardExpandModal({
       aria-label={`${board.title || '제목 없는 보드'} 확대 보기`}
     >
       {/* 배경 클릭으로 닫기. 키보드 사용자는 Escape와 닫기 버튼을 쓰므로 버튼 역할은 주지 않는다. */}
-      <div className="board-modal__backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="board-modal__backdrop" onClick={requestClose} aria-hidden="true" />
 
       <div className="board-modal__panel">
         {/* 버튼과 상세 패널은 캡처 영역 밖에 둔다. PNG에는 보드 제목과 콜라주만 담긴다. */}
@@ -185,7 +194,7 @@ export function BoardExpandModal({
           >
             {isCapturing ? '캡처 중…' : '캡처하기'}
           </button>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="보드 닫기">
+          <button className="icon-button" type="button" onClick={requestClose} aria-label="보드 닫기">
             ×
           </button>
         </div>
@@ -204,7 +213,7 @@ export function BoardExpandModal({
                 onCancel={editor.cancelRename}
                 onStart={editor.startRename}
                 onSubmit={editor.rename}
-                title={board.title ?? ''}
+                title={editor.draft.title}
               />
               <p>
                 {board.contents.length} pieces · 좋아요 {board.likeCount.toLocaleString()}
@@ -220,22 +229,25 @@ export function BoardExpandModal({
                 화면에서는 제목이 이미 보이므로 숨겨 두고, 캡처 복제본에서만 보이게 한다(handleCapture의 onclone).
               */}
               <h2 className="board-modal__capture-title" data-capture-only hidden>
-                {board.title || '제목 없는 보드'}
+                {editor.draft.title || '제목 없는 보드'}
               </h2>
               <BoardCollage
-                contents={board.contents}
+                contents={editor.draft.contents}
+                layout={editor.draft.layout}
                 interactive
                 onContentSelect={editor.setSelected}
                 // 어떤 콘텐츠인지는 슬롯 번호로 다시 찾으므로 위치만 쓴다.
                 onContentEdit={(_content, slotIndex) => editor.startSlotEdit(slotIndex)}
+                onLayoutChange={editor.changeLayout}
               />
             </div>
+            <BoardEditBar editor={editor} ownBoard={canDelete} />
           </div>
 
-          {editor.editingSlot !== null && board.contents[editor.editingSlot] ? (
+          {editor.editingSlot !== null && editor.draft.contents[editor.editingSlot] ? (
             <ContentSearchPanel
-              boardContentIds={board.contents.map((content) => content.id)}
-              current={board.contents[editor.editingSlot]}
+              boardContentIds={editor.draft.contents.map((content) => content.id)}
+              current={editor.draft.contents[editor.editingSlot]}
               isSaving={editor.isSaving}
               key={editor.editingSlot}
               onClose={editor.cancelSlotEdit}
@@ -250,8 +262,10 @@ export function BoardExpandModal({
           ) : (
             <p className="board-modal__hint">
               포스터를 클릭하면 상세 정보를 볼 수 있어요.
+              포스터를 끌어 옮기고, 왼쪽 위 손잡이로 돌릴 수 있어요(휴대폰은 길게 눌러 옮기기).
               포스터에 마우스를 올리면 수정 버튼이 나타납니다.
-              {board.boardId === null ? ' 수정하면 내 보드로 저장됩니다.' : ''}
+              바꾼 제목·콘텐츠·배치는 저장 버튼을 눌러야 반영됩니다.
+              {canDelete ? '' : ' 저장하면 원본은 두고 내 보드로 저장됩니다.'}
             </p>
           )}
         </div>

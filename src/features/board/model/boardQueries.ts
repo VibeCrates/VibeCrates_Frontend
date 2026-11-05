@@ -100,7 +100,7 @@ export function usePopularBoards(enabled: boolean) {
 
 
 /**
- * 보드 저장. 제목 변경·콘텐츠 교체·순서 변경이 모두 이 하나로 처리된다.
+ * 보드 저장. 제목 변경·콘텐츠 교체·배치 변경이 모두 이 하나로 처리된다.
  *
  * boardId가 null이면(아직 저장 전인 추천/검색 보드) 고칠 원본이 서버에 없으므로 생성한다.
  * 저장된 보드라도 내 것이 아니면 서버가 원본은 두고 내 보드로 새로 저장해 돌려주므로, 응답 보드는 요청한 것과
@@ -130,6 +130,18 @@ export type BoardLikeMode =
   | { kind: 'saved' }
   | { kind: 'recommended'; likeToken: string }
   | { kind: 'search'; likeToken: string }
+
+/**
+ * 제목·구성이 같은 내 보드가 이미 있어 저장이 거절됐으면 그 보드의 id. 아니면 null.
+ * 서버가 거절 응답의 data에 { boardId }를 담는다(docs/board-schema.md 12-4).
+ */
+export function duplicateBoardIdOf(error: unknown): number | null {
+  if (!(error instanceof ApiError) || error.status !== 400) {
+    return null
+  }
+  const data = error.data as { boardId?: unknown } | null
+  return typeof data?.boardId === 'number' ? data.boardId : null
+}
 
 /** 이미 지워진 보드에 좋아요를 눌렀을 때 서버가 돌려주는 거절인지. */
 export function isDeletedBoardError(error: unknown): boolean {

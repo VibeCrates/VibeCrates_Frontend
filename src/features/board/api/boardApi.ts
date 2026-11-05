@@ -1,6 +1,6 @@
 import { apiRequest } from '../../../shared/api'
 import type { PageResponse } from '../../../shared/types/api'
-import type { BoardWithContents, RecommendedBoard } from '../../../shared/types/board'
+import type { BoardWithContents, RecommendedBoard, SlotLayout } from '../../../shared/types/board'
 
 /**
  * 사용자 취향 벡터 기반 "오늘의 추천 보드" 4개.
@@ -76,6 +76,16 @@ export function unlikeBoard(boardId: number): Promise<BoardLikeResult> {
 export interface BoardSaveInput {
   title: string
   contentIds: number[]
+  /**
+   * contentIds와 같은 순서의 배치 8개. null이면 기본 배치다.
+   * 서버는 받은 대로 덮어쓰므로, 배치가 저장된 보드의 제목만 고칠 때도 화면에 보이는 배치를 함께 보낸다.
+   */
+  layout: SlotLayout[] | null
+}
+
+/** 저장된 보드 하나. 중복으로 거절됐을 때 이미 있는 내 보드를 열 때 쓴다. */
+export function getBoard(boardId: number): Promise<BoardWithContents> {
+  return apiRequest(`/api/boards/list?boardId=${encodeURIComponent(boardId)}`)
 }
 
 /** 아직 저장 전인 보드(추천/검색 보드)를 사용자가 고쳤을 때. 내 보드로 새로 만든다. */
