@@ -6,6 +6,23 @@ import type { ContentSummary } from './content'
  */
 export const BOARD_CONTENT_COUNT = 8
 
+/**
+ * 포스터 한 장의 배치. 사용자가 끌어 옮기고 돌린 결과다(백엔드 docs/board-schema.md 12장).
+ *
+ * 보드 단위로는 8개(콘텐츠와 같은 순서) 또는 null이다. null이면 콜라주의 기본 배치로 그린다.
+ * 위치는 포스터 <b>중심</b>이 보드 폭·높이의 몇 %인지다. 왼쪽 위가 아니라 중심이라 CSS의 크기 보정이 바뀌어도 어긋나지 않는다.
+ */
+export interface SlotLayout {
+  /** 0~100 */
+  x: number
+  /** 0~100 */
+  y: number
+  /** 도, -180~180 */
+  rotation: number
+  /** 겹침 순위 1~8, 클수록 위. 한 보드 안에서 한 번씩만 쓴다. */
+  z: number
+}
+
 export interface BoardWithContents {
   /**
    * 아직 저장되지 않은 보드(검색 결과 보드, 오늘의 추천 보드)는 null이다.
@@ -24,6 +41,8 @@ export interface BoardWithContents {
   /** 조회한 사용자가 만든 보드인지. 주인만 보드를 지울 수 있다. 검색 결과 보드에는 없는 값이다. */
   owned?: boolean
   contents: ContentSummary[]
+  /** 저장된 배치. 없거나 null이면 기본 배치다. 내 보드(USER_CUSTOM)만 값을 가질 수 있다. */
+  layout?: SlotLayout[] | null
 }
 
 /**

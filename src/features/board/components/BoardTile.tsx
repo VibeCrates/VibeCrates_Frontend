@@ -17,7 +17,7 @@ export function BoardTile({ board, onOpen }: BoardTileProps) {
       aria-label={`${board.title || '제목 없는 보드'} 보드 열기`}
     >
       <div className="board-tile__canvas">
-        <BoardCollage contents={board.contents} interactive={false} />
+        <BoardCollage contents={board.contents} layout={board.layout} interactive={false} />
       </div>
       <div className="board-tile__meta">
         <h3>{board.title || '제목 없는 보드'}</h3>

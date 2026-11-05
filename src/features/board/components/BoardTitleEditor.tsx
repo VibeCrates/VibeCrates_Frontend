@@ -12,7 +12,7 @@ interface BoardTitleEditorProps {
 /**
  * 보드 제목. 평소에는 그냥 제목이고, 옆의 버튼을 누르면 입력창으로 바뀐다.
  *
- * 제목만 바꿔도 저장은 보드 전체를 다시 제출하는 것과 같은 요청이다. 내 보드가 아니면
+ * 여기서 바꾼 제목은 화면에만 반영된다. 콘텐츠·배치와 함께 저장 버튼(BoardEditBar)으로 보낸다. 내 보드가 아니면
  * 서버가 원본은 두고 내 보드로 새로 저장하기 때문에, 남의 보드 이름을 바꾸는 일은 생기지 않는다.
  */
 export function BoardTitleEditor({
@@ -69,7 +69,7 @@ export function BoardTitleEditor({
         disabled={isSaving}
       />
       <button className="outline-button" type="submit" disabled={isSaving}>
-        {isSaving ? '저장 중…' : '저장'}
+        확인
       </button>
       <button className="text-button" type="button" disabled={isSaving} onClick={onCancel}>
         취소
