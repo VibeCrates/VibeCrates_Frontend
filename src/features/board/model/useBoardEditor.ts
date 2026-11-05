@@ -34,10 +34,14 @@ function draftKey(draft: BoardDraft): string {
  *
  * 저장 결과는 `onSaved`로 올려보낸다. 서버가 원본은 두고 내 보드로 새로 저장하면 boardId가 바뀌어 돌아오므로,
  * 화면이 보고 있는 보드를 그 값으로 갈아끼워야 다음 수정이 새 보드에 이어진다.
+ *
+ * `originToken`은 저장 전 보드(홈 추천·검색 결과)의 likeToken이다. 그 보드를 고쳐 새로 만들 때 함께 보내,
+ * 서버가 원래 제목·구성을 확인하고 뺀 작품·넣은 작품을 행동 로그에 적게 한다(백엔드 docs/board-schema.md 13-4).
  */
 export function useBoardEditor(
   board: BoardWithContents,
   onSaved?: (board: BoardWithContents) => void,
+  originToken: string | null = null,
 ) {
   /** 상세 패널에 띄운 콘텐츠. */
   const [selected, setSelected] = useState<ContentSummary | null>(null)
@@ -156,6 +160,8 @@ export function useBoardEditor(
           title: draft.title,
           contentIds: draft.contents.map((content) => content.id),
           layout: draft.layout,
+          // 저장된 보드는 원래 구성이 서버에 있다. 저장 전 보드를 처음 저장할 때만 보낸다.
+          originToken: board.boardId === null ? originToken : null,
         },
         {
           onSuccess: (saved) => {

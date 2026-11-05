@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas'
 import { useEffect, useRef, useState } from 'react'
+import { logBoardCapture } from '../api/boardApi'
 import type { BoardLikeResult } from '../api/boardApi'
 import type { BoardWithContents } from '../../../shared/types/board'
 import { useDeleteBoard } from '../model/boardQueries'
@@ -51,7 +52,7 @@ export function BoardExpandModal({
   const [captureNotice, setCaptureNotice] = useState<string | null>(null)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
   const captureAreaRef = useRef<HTMLDivElement>(null)
-  const editor = useBoardEditor(board, onBoardUpdated)
+  const editor = useBoardEditor(board, onBoardUpdated, recommendLikeToken)
   const remove = useDeleteBoard()
 
   // 주인만 지울 수 있다. 이미 지운 보드(남이 지운 보드를 좋아요해 둔 경우)는 내 것이 아니라 owned가 false다.
@@ -110,6 +111,13 @@ export function BoardExpandModal({
       link.href = canvas.toDataURL('image/png')
       link.click()
       setCaptureNotice('보드를 PNG로 저장했습니다.')
+      // 행동 로그. 사진에 담긴 그대로(저장하지 않은 편집 포함) 알리고, 실패해도 사용자에게 보이지 않는다.
+      logBoardCapture({
+        boardId: board.boardId,
+        likeToken: board.boardId === null ? recommendLikeToken : null,
+        title: editor.draft.title,
+        contentIds: editor.draft.contents.map((content) => content.id),
+      }).catch(() => undefined)
     } catch {
       setCaptureNotice('이미지 캡처에 실패했습니다. 이미지 서버의 CORS 설정을 확인해주세요.')
     } finally {

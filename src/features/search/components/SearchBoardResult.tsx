@@ -46,10 +46,14 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
     void queryClient.invalidateQueries({ queryKey: MY_BOARDS_KEY })
   }
 
-  const editor = useBoardEditor(board, (saved) => {
-    patchCache(saved)
-    invalidateMyBoards()
-  })
+  const editor = useBoardEditor(
+    board,
+    (saved) => {
+      patchCache(saved)
+      invalidateMyBoards()
+    },
+    board.likeToken,
+  )
 
   function handleLikeResult(result: BoardLikeResult) {
     patchCache({
