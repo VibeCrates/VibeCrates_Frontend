@@ -117,10 +117,18 @@ export function SearchBoardResult({ board, keyword }: SearchBoardResultProps) {
         ) : (
           <p className="search-result__hint">
             포스터를 클릭하면 상세 정보를 볼 수 있어요.
+            <br />
             포스터를 끌어 옮기고, 왼쪽 위 손잡이로 돌릴 수 있어요(휴대폰은 길게 눌러 옮기기).
+            <br />
             포스터에 마우스를 올리면 수정 버튼이 나타납니다.
+            <br />
             바꾼 제목·콘텐츠·배치는 저장 버튼을 눌러야 반영됩니다.
-            {ownBoard ? '' : ' 저장하면 원본은 두고 내 보드로 저장됩니다.'}
+            {ownBoard ? null : (
+              <>
+                <br />
+                저장하면 원본은 두고 내 보드로 저장됩니다.
+              </>
+            )}
           </p>
         )}
       </div>
