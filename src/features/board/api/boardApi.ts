@@ -81,6 +81,12 @@ export interface BoardSaveInput {
    * 서버는 받은 대로 덮어쓰므로, 배치가 저장된 보드의 제목만 고칠 때도 화면에 보이는 배치를 함께 보낸다.
    */
   layout: SlotLayout[] | null
+  /**
+   * 저장 전 보드(홈 추천·검색 결과)를 고쳐 <b>새로 만들 때만</b> 보내는 그 보드의 likeToken.
+   * 서버가 토큰으로 원래 제목·구성을 확인해 뺀 작품·넣은 작품을 행동 로그에 적는다(백엔드 docs/board-schema.md 13-4).
+   * 수정(PUT)은 원래 구성이 서버에 있어 보내지 않는다.
+   */
+  originToken?: string | null
 }
 
 /** 저장된 보드 하나. 중복으로 거절됐을 때 이미 있는 내 보드를 열 때 쓴다. */
@@ -133,6 +139,26 @@ export function likeSearchBoard(likeToken: string): Promise<BoardLikeResult> {
   return apiRequest('/api/search/board/likes', {
     method: 'POST',
     body: JSON.stringify({ likeToken }),
+  })
+}
+
+/** 보드 사진 저장 기록. 원래 보드는 boardId(저장된 보드) 또는 likeToken(저장 전 보드)으로 가리킨다. */
+export interface BoardCaptureInput {
+  boardId: number | null
+  likeToken: string | null
+  /** 화면에 보이던 제목·콘텐츠. 저장하지 않은 편집 상태일 수 있고, 서버가 원래 보드와 비교해 표시한다. */
+  title: string
+  contentIds: number[]
+}
+
+/**
+ * 사용자가 "캡처하기"로 보드를 사진으로 저장했다고 알린다(백엔드 docs/board-schema.md 13-5).
+ * 캡처는 브라우저에서만 일어나 서버가 스스로 알 수 없다. 로그용이라 실패해도 사용자에게 알리지 않는다.
+ */
+export function logBoardCapture(input: BoardCaptureInput): Promise<void> {
+  return apiRequest('/api/logs/board-capture', {
+    method: 'POST',
+    body: JSON.stringify(input),
   })
 }
 
